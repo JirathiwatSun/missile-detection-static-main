@@ -1,0 +1,18 @@
+# Missile Detection Project Requirements
+# Install with: pip install -r requirements.txt
+
+ultralytics>=8.3.0
+roboflow>=1.2.0
+opencv-python
+torch>=2.0.0
+torchvision
+numpy
+pandas
+matplotlib
+psutil
+py-cpuinfo
+pyyaml
+requests
+scipy
+seaborn
+tqdm

@@ -1,0 +1,29 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Datasets & Models
+datasets/
+runs/
+models/*.pt
+!models/missile.pt
+!models/yolo26n.pt
+
+# Media Outputs
+output_tracked.mp4
+screenshot_*.png
+
+# IDE Config
+.vscode/
+.idea/
+
+# Roboflow Config
+.roboflow/
+roboflow/
