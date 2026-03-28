@@ -12,7 +12,7 @@ A professional-grade real-time missile detection and tracking system optimized f
 - `src/`: Core tracking engine (`missile_tracker.py`).
 - `scripts/`: Training and dataset utility scripts.
 - `datasets/`: (Local only) Training data from Roboflow.
-- `models/`: Weights files (`missile.pt`, `yolo26n.pt`).
+- `models/`: Weights files (`missile.pt`, `yolo26n_custom.pt`).
 - `data/`: Sample images and tactical footage.
 
 ## 🛠️ Setup Instructions
@@ -23,7 +23,10 @@ A professional-grade real-time missile detection and tracking system optimized f
    ```
 
 2. **Install Dependencies**:
+   It is recommended to use a virtual environment:
    ```bash
+   python -m venv .venv
+   .venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
@@ -38,7 +41,7 @@ Use the **`run.bat`** launcher for easy access:
 
 ### Track Video
 ```bash
-.\run.bat track --video data\videos\Iron_Dome.mp4
+.\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\yolo26n_custom.pt
 ```
 
 ### Force Night Mode

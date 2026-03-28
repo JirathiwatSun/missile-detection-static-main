@@ -14,7 +14,7 @@ datasets/
 runs/
 models/*.pt
 !models/missile.pt
-!models/yolo26n.pt
+!models/yolo26n_custom.pt
 
 # Media Outputs
 output_tracked.mp4

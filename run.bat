@@ -1,21 +1,28 @@
-@echo off
-REM ============================================================
-REM  Iron Dome Missile Tracker v3 — Day/Night Launcher
-REM  Day mode  : YOLO shape detection
-REM  Night mode: YOLO shape + Flame/Exhaust dot detection
-REM ============================================================
+setlocal
+set PYTHON=python
 
-set PYTHON=C:\Users\jirat\AppData\Local\Microsoft\WindowsApps\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\python.exe
+REM 1. Check for virtual environment in the current directory
+if exist ".venv\Scripts\python.exe" (
+    set "PYTHON=.venv\Scripts\python.exe"
+    echo [ENV] Using virtual environment: .venv
+) else if exist "venv\Scripts\python.exe" (
+    set "PYTHON=venv\Scripts\python.exe"
+    echo [ENV] Using virtual environment: venv
+) else (
+    echo [ENV] No local virtual environment found. Using system 'python'.
+    echo [ENV] TIP: Run 'python -m venv .venv' and Pip install requirements for best results.
+)
 
 echo ====================================================
 echo   Iron Dome Missile Tracker v3
 echo   Day: YOLO shape detection
 echo   Night: YOLO + Flame/Propellant Exhaust detection
-echo   Python: %PYTHON%
+echo   Current Python: %PYTHON%
 echo ====================================================
 echo.
 
 if "%~1"=="track" goto :track
+if "%~1"=="train" goto :train
 goto :usage
 
 :track
