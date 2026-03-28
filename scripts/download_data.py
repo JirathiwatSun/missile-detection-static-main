@@ -11,8 +11,8 @@ def download_dataset(api_key):
     project = rf.workspace("qedwdqw").project("final-missiles")
     
     # Download the dataset in YOLOv8 format (compatible with YOLO26)
-    # Note: Using version 1 by default; check Roboflow if another version is needed.
-    dataset = project.version(2).download("yolov8")
+    # Automatically download into the organized 'datasets' folder
+    dataset = project.version(2).download(model_format="yolov8", location="datasets/FINAL-MISSILES-2")
     
     print(f"Dataset downloaded to: {dataset.location}")
     return dataset.location

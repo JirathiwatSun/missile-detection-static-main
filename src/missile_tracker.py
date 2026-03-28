@@ -52,7 +52,7 @@ def acquire_gps():
 # ─────────────────────────────────────────────────────────────────────────────
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_WEIGHTS = os.path.join(BASE_DIR, "models", "yolo26n.pt")
+DEFAULT_WEIGHTS = os.path.join(BASE_DIR, "models", "yolo26n_custom.pt")
 FALLBACK_WEIGHTS = os.path.join(BASE_DIR, "models", "missile.pt")
 
 AUTO_NIGHT_THRESHOLD = 60   # mean brightness → night mode
