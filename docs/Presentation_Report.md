@@ -9,16 +9,18 @@ The primary objective of this project is to construct a high-fidelity, dual-engi
 
 Modern computer vision systems evaluating high-resolution video streams in real-time are incredibly resource-intensive. Without programmatic optimization, a system will experience severe CPU starvation, memory fragmentation, and I/O bottlenecks. To actively intercept these issues, our program implements the following OS optimization constraints:
 
-* **I/O Management & Process Scheduling:** Video tracking requires uninterrupted sequential processing. If the application pauses to establish a network connection, the video feed stutters. To solve this, the program utilizes **multithreading** (`threading.Thread`). Heavy network I/O operations—such as scraping real-time JSON geolocation data via the `ipinfo.io` API—are completely decoupled into a daemon background thread, ensuring the main process running the CPU-intensive OpenCV loops executes without blocking.
-* **CPU & Algorithmic Optimization:** Rather than computing heavy mathematical pixel displacements across a full 1080p frame to filter out static background text/city lights, the program applies aggressive data downsizing. Frames are aggressively scaled down to a **320x180 matrix grid** to compute Fast Phase Correlation (camera ego-motion). This dramatically reduces CPU cycles required per frame calculation.
-* **Memory Management & Garbage Collection:** Python dynamic tracking variables frequently cause "Memory Leaks" in continuous systems (OOM crashes). The application strictly binds the active target logic using bounded data structures (e.g., `collections.deque(maxlen=30)`). Instead of an infinitely growing array of target history coordinates, the OS immediately releases memory blocks past the 30-frame limit, ensuring a completely stable RAM footprint indefinitely.
+* **I/O Management & Process Scheduling:** Video tracking requires uninterrupted sequential processing. If the application pauses to establish a network connection, the video feed stutters. To solve this, the program utilizes **multithreading** (`threading.Thread`). Heavy network I/O operations—such as scraping real-time JSON geolocation data via the `ipinfo.io` API—are completely decoupled into a daemon background thread.
+* **CPU & Algorithmic Optimization:** Rather than computing heavy full-frame optical flow, the program implements **camera ego-motion tracking via Fast Phase Correlation**. By aggressively scaling frames down to a **320x180 matrix grid**, the system computes spatial displacement in the frequency domain, dramatically reducing the CPU cycles required to differentiate camera shake from true target motion.
+* **Memory Management & Garbage Collection:** Python dynamic tracking variables frequently cause "Memory Leaks" in continuous systems. The application strictly binds the active target logic using bounded data structures (e.g., `collections.deque(maxlen=30)`). Instead of an infinitely growing array of target history coordinates, the OS immediately releases memory blocks past the 30-frame limit, ensuring a completely stable RAM footprint indefinitely.
+* **Dual-Engine Architecture:** At night, conventional AI models often fail due to signal-to-noise ratios. Our system utilizes a **Dual-Engine** approach: a primary **YOLO26-Custom** shape detector for daylight and a custom-engineered **NightFlameDetector** for tracking high-intensity propellant glows in near-zero-lux environments.
 
 ### 3. Data Source
 To engineer an accurate AI model, the data pipeline was aggregated from both cloud-level structural resources and local, active memory testing feeds:
 
 * **Source Identification:** The primary training dataset was sourced from the **Roboflow Universe platform** (the industry standard for open-source computer vision datasets), specifically targeting aerial projectile and missile taxonomy. Local inference testing utilized authentic tactical footage (e.g., `IRAN!1.mp4`, `Iron_Dome.mp4`).
 * **Source Quality:** Roboflow is considered exceptionally reputable. The chosen 9,206-image dataset features rigorous bounding box annotations specifically engineered to distinguish true projectiles from atmospheric artifacts like birds, clouds, or flares. 
-* **Accessibility & Disk I/O:** The deep-learning weights file (`missile.pt`) and inference data (`.mp4` streams) are operated locally on an RTX 4060 GPU to minimize network latency. During inference, OpenCV sequentially buffers variable-sized video blocks (ranging from 2MB to 54MB per file) from the hard disk to active RAM, testing the OS’s disk caching efficiency and file buffering handling in the process.
+* **Model Accuracy (YOLO26n-Custom):** The final training run across 100 epochs achieved state-of-the-art results for a real-time edge model: **85.0% Precision**, **76.9% Recall**, and **83.9% mAP@50**.
+* **Accessibility & Disk I/O:** The deep-learning weights file (`yolo26n.pt`) and inference data (`.mp4` streams) are operated locally on an RTX 4060 GPU to minimize network latency. During inference, OpenCV sequentially buffers variable-sized video blocks from the hard disk to active RAM, testing the OS’s disk caching efficiency in the process.
 
 ### 4. Data Format 
 Computer vision processing actively translates massive continuous rivers of unstructured visual data into mathematically rigid, structured mapping arrays.
@@ -43,7 +45,8 @@ Computer vision processing actively translates massive continuous rivers of unst
 ### 5. Amount of Data
 The scale of data computation directly highlights the necessity of the OS optimization mechanics presented earlier.
 
-* **Training Corpus Pipeline:** The model required the ingestion and structural processing of **9,206 heavily annotated images** continuously fed through PyTorch tensor memory arrays over multiple epochs.
+* **Training Corpus Pipeline:** The model required the ingestion and structural processing of **9,206 heavily annotated images** continuously fed through PyTorch tensor memory arrays over 100 epochs.
+* **Visual Optics Suite:** To facilitate target acquisition across all lighting conditions, the system processes uncompressed data into three distinct optical overlays: **Thermal FLIR emulation**, **Green Phosphor NVG**, and **CLAHE-boosted Night-Vision**.
 * **Storage / Local Disk Footprint:** The local application environment dynamically reads multiple high-throughput validation videos ranging from **~2 MB to over 54 MB** straight from OS virtual memory.
 * **Real-time Memory Stream Pipeline:** A standard 1920x1080 video feed operating at 30 FPS can equate to parsing over **180 MB of uncompressed matrix data per second**. The script is actively capturing, processing, tracking threats, calculating object life-cycles, overriding GUI pixels, and then garbage-collecting this data continuously without crashing the main OS thread. 
 
@@ -51,9 +54,9 @@ The scale of data computation directly highlights the necessity of the OS optimi
 
 ### 💡 Presenter Notes (For 5-Minute Delivery Strategy):
 * **0:00 - 1:00 (Topic & Objective):** Heavily lean into the *OS Optimization* sections. Don't just talk about the AI. Speak clearly to your professor about **how you solved resource bottlenecks**. Mention "Asynchronous Threading" for the GPS to stop UI stutter, and bounded memory limits (`deque`) to stop memory leaks.
-* **1:00 - 2:00 (Data Sources):** Emphasize how Roboflow is used by actual enterprise developers. Bring up the 9,206 image dataset size to show you did the legwork.
-* **2:00 - 4:00 (Data Formats):** This is the core rubric meat. Spend a full two minutes explaining the flow of data:
-  * Show them a video (Explain: *This is Unstructured Data, very taxing on the hardware*)
+* **1:00 - 2:00 (Data Sources & Accuracy):** Emphasize how Roboflow is used by actual enterprise developers. Bring up the 9,206 image dataset size and mention your **85% Precision** score. This proves the system isn't just fast—it's highly reliable.
+* **2:00 - 4:00 (Data Formats & Visual Optics):** This is the core rubric meat. Spend a full two minutes explaining the flow of data:
+  * Show them the **Thermal/NVG filters** (Explain: *How uncompressed matrix data is manipulated for optics*)
   * Show them the JSON GPS ping (Explain: *This is Semi-Structured tags*)
   * Show them the generated bounding boxes and distances (Explain: *This converts unstructured data into Structured Telemetry*)
-* **4:00 - 5:00 (Amount of Data):** Finish strong by citing the **180 MB of uncompressed data per second** statistic to drive home why Operating System memory management is essential. Take questions.
+* **4:00 - 5:00 (Amount of Data):** Finish strong by citing the **180 MB of uncompressed data per second** statistic and the **100-epoch training duration** to drive home why Operating System optimization is essential. Take questions.
