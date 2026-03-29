@@ -289,6 +289,62 @@ class StaticLightFilter:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Density-Based Noise Filter
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DensityFilter:
+    """
+    Suppresses clusters of detections that are too DENSE — likely city lights.
+
+    Key insight: A single missile trail has only 1-2 boxes per neighborhood.
+    A city horizon or image sensor noise often creates 10-50 small boxes
+    clustered together.
+
+    Implementation:
+      - Global Rejection: If total detections > `global_max`, reject ALL.
+      - Local Rejection: For each detection, count neighbors within `radius`.
+        If count > `local_max`, the detection is noise.
+    """
+
+    def __init__(self, local_max: int = 15, radius: int = 80, global_max: int = 40):
+        self.local_max = local_max
+        self.radius    = radius
+        self.global_max = global_max
+
+    def filter(self, detections: list) -> list:
+        if not detections:
+            return []
+
+        # 1. Global Flood Protection (Image-wide Overload)
+        if len(detections) > self.global_max:
+            return []
+
+        if len(detections) <= 3:
+            return detections # Optimization: Always safe if count is tiny
+
+        # 2. Local Density Check
+        filtered = []
+        for i, d in enumerate(detections):
+            bx, by, bw, bh = d["box"]
+            cx, cy = bx + bw // 2, by + bh // 2
+            
+            neighbors = 0
+            for j, d2 in enumerate(detections):
+                if i == j: continue
+                bx2, by2, bw2, bh2 = d2["box"]
+                cx2, cy2 = bx2 + bw2 // 2, by2 + bh2 // 2
+                
+                # Simple pixel distance
+                if math.hypot(cx - cx2, cy - cy2) < self.radius:
+                    neighbors += 1
+
+            if neighbors <= self.local_max:
+                filtered.append(d)
+                
+        return filtered
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Night-Vision Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -689,6 +745,7 @@ def run(source, weights: str, conf: float, show_window: bool,
         max_aspect_ratio: float, ground_fraction: float,
         static_grid: int, static_world_thresh: int,
         static_cam_thresh: int, static_decay: int,
+        max_density: int, density_radius: int,
         trail_length: int, track_max_dist: int,
         track_confirm: int, track_missed: int,
         default_filter: str) -> None:
@@ -719,6 +776,11 @@ def run(source, weights: str, conf: float, show_window: bool,
         world_thresh=static_world_thresh,
         cam_thresh=static_cam_thresh,
         decay=static_decay
+    )
+    density_filter = DensityFilter(
+        local_max=max_density,
+        radius=density_radius,
+        global_max=40
     )
 
     class_names = model.names
@@ -854,6 +916,8 @@ def run(source, weights: str, conf: float, show_window: bool,
             flame_detections = flame_detector.detect(frame)
             # Suppress static bright spots (city lights, text)
             flame_detections = static_filter.filter(flame_detections, cam_x, cam_y)
+            # Suppress clusters of noise (city light horizons)
+            flame_detections = density_filter.filter(flame_detections)
             # Deduplicate flame-vs-flame (same blob split into two nearby boxes)
             flame_detections = _dedup_detections(flame_detections, iou_thresh=0.30)
             # Remove any flame box that overlaps with a YOLO box (YOLO wins — higher quality)
@@ -1108,6 +1172,12 @@ def parse_args():
     p.add_argument("--static-decay", type=int, default=12,
                    help="Frames before a static light is forgotten (default 12)")
 
+    # Density-Based Noise Filtering
+    p.add_argument("--max-density", type=int, default=15,
+                   help="Maximum detections within a radius to count as signal (default 15)")
+    p.add_argument("--density-radius", type=int, default=80,
+                   help="Pixel radius for density checking (default 80)")
+
     # Tracking tuning
     p.add_argument("--trail-length", type=int, default=TRAIL_LENGTH,
                    help=f"Number of frames to keep in motion trail (default {TRAIL_LENGTH})")
@@ -1147,6 +1217,8 @@ if __name__ == "__main__":
         static_world_thresh = args.static_world_thresh,
         static_cam_thresh   = args.static_cam_thresh,
         static_decay        = args.static_decay,
+        max_density         = args.max_density,
+        density_radius      = args.density_radius,
         trail_length        = args.trail_length,
         track_max_dist      = args.track_max_dist,
         track_confirm       = args.track_confirm,

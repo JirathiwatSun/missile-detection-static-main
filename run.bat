@@ -43,6 +43,12 @@ SET CAM_THRESH=25
 REM STATIC_DECAY: (5-20) Frames it takes the system to 'forget' a static light.
 SET STATIC_DECAY=12
 
+REM --- Density-Based Noise Filter ---
+REM MAX_DENSITY: (10-30) Max detections within a radius. Higher = allows more missiles.
+SET MAX_DENSITY=15
+REM DENSITY_RADIUS: (50-150) Pixels. Radius to check for "crowded" boxes (cities).
+SET DENSITY_RADIUS=80
+
 REM --- Tracking Logic ---
 REM TRAIL_LEN: (10-100) Number of frames to draw for the visual "exhaust trail".
 SET TRAIL_LEN=30
@@ -93,6 +99,8 @@ for /f "tokens=1,* delims= " %%a in ("%*") do set REMAINING=%%b
     --track-missed %TRACK_MISSED% ^
     --night-sensitivity %NIGHT_SENS% ^
     --default-filter %DEF_FILTER% ^
+    --max-density %MAX_DENSITY% ^
+    --density-radius %DENSITY_RADIUS% ^
     %REMAINING%
 goto :EOF
 
