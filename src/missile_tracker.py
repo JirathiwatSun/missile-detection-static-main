@@ -461,6 +461,9 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
     # 1. Fighter Jet Target Brackets (Adaptive Dynamics)
     bw, bh = x2 - x1, y2 - y1
     
+    # Draw Thin Side Edges (Connecting the corners)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), dim_c, lw_fine, cv2.LINE_AA)
+
     # Differentiate minimum corner size based on detection source
     if is_missile and source == "yolo":
         # YOLO Missile: Larger minimum corner for daylight optics

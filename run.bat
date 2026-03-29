@@ -21,9 +21,9 @@ REM ===========================================================================
 
 REM --- Night Flame Detector ---
 REM BRIGHT_THRESH: (150-200) Lower = more sensitive (captures dim exhaust), Higher = cleaner.
-SET BRIGHT_THRESH=180
+SET BRIGHT_THRESH=160
 REM MIN_FLAME: (3-15) Min pixel area. Lower for tiny/distant missiles, Higher to ignore noise.
-SET MIN_FLAME=4
+SET MIN_FLAME=3
 REM MAX_FLAME: (50000-200000) Prevents tracking massive explosions or screen-flares.
 SET MAX_FLAME=150000
 REM EDGE_MARGIN: (0.02-0.10) Screen % to ignore at edges. Removes TV logos/text.
