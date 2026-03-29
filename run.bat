@@ -45,8 +45,8 @@ echo   run.bat track --video data\videos\video.mp4 --save            -- Save out
 echo   run.bat track --cam 0 --night                     -- Night mode on webcam
 echo.
 echo Night Flame Detector tuning:
-echo   --bright-thresh 180     Lower = more sensitive to dim flames (default: 200)
-echo   --min-flame-area 4      Minimum pixel area for flame blob (default: 8)
+echo   --bright-thresh 160     Lower = more sensitive to dim flames (default: 170)
+echo   --min-flame-area 4      Minimum pixel area for flame blob (default: 5)
 echo   --night-sensitivity 80  Brightness threshold for auto night switch (default: 60)
 echo.
 echo Examples:
@@ -65,4 +65,6 @@ echo Legend:
 echo   YOLO:N  = missile shape detections (works in daylight)
 echo   FLAME:N = propellant flame / exhaust dot detections (works at night)
 
-REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\missile.pt --bright-thresh 170
+REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\missile.pt
+REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\yolo26n_custom.pt
+

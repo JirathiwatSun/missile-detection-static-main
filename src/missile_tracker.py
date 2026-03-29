@@ -28,6 +28,7 @@ import io
 import math
 import collections
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 import threading
 import json
 
@@ -106,7 +107,7 @@ class NightFlameDetector:
         self.max_area           = max_area_px
         self.edge_margin_frac   = edge_margin_frac   # fraction of frame to ignore at borders
         self.max_aspect_ratio   = max_aspect_ratio   # blobs wider/taller than this = text/bars
-        self.bg_subtractor      = cv2.createBackgroundSubtractorMOG2(history=100, varThreshold=45, detectShadows=False)
+        self.bg_subtractor      = cv2.createBackgroundSubtractorMOG2(history=150, varThreshold=35, detectShadows=False)
 
     def detect(self, frame) -> list[dict]:
         h_fr, w_fr = frame.shape[:2]
@@ -125,8 +126,8 @@ class NightFlameDetector:
         # Intersect bright spots with active motion flow
         flow_mask = cv2.bitwise_and(bright_mask, motion_mask)
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-        flow_mask = cv2.dilate(flow_mask, kernel, iterations=2)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        flow_mask = cv2.dilate(flow_mask, kernel, iterations=1)
         flow_mask = cv2.morphologyEx(flow_mask, cv2.MORPH_CLOSE, kernel)
 
         num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(
@@ -148,8 +149,8 @@ class NightFlameDetector:
 
             # ── Filter 1: Edge & Ground Exclusion ───────────────────────────
             # Skip blobs at the very top/left/right edge of the frame (logos/text)
-            # ALSO completely ignore the bottom 25% of the screen (city lights, ground clutter)
-            ground_y = int(h_fr * 0.75)
+            # ALSO completely ignore the bottom 30% of the screen (city lights, ground clutter)
+            ground_y = int(h_fr * 0.70)
             if cx < mg or cx > w_fr - mg or cy < mg or cy > ground_y:
                 continue
 
@@ -185,7 +186,7 @@ class NightFlameDetector:
         return detections
 
     def reset(self):
-        self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(history=100, varThreshold=45, detectShadows=False)
+        self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(history=150, varThreshold=35, detectShadows=False)
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Static Light Filter
@@ -210,10 +211,10 @@ class StaticLightFilter:
     a few frames, so its count stays low and it is NEVER suppressed.
     """
 
-    def __init__(self, grid_size: int = 50,     # Increased grid size
-                 world_thresh: int = 25,    # Missile can stay in grid for ~1 sec before deletion
-                 cam_thresh: int = 30,     
-                 decay: int = 5):           # Takes slightly longer to forget static lights
+    def __init__(self, grid_size: int = 30,     # Finer grid for precision
+                 world_thresh: int = 8,      # Suppresses City Lights after only 8 frames
+                 cam_thresh: int = 25,     
+                 decay: int = 12):           # Remembers static lights better during panned motion
         self.grid_size = grid_size
         self.world_thresh = world_thresh  # Suppresses City Lights (Static in World)
         self.cam_thresh = cam_thresh      # Suppresses Burned-in Text/Logos (Static in Camera)
@@ -360,87 +361,110 @@ class MissileTrail:
         self._hits: dict[int, int] = {}
         self._last_hit: dict[int, dict] = {}
         self._box_history: dict[int, collections.deque] = {}
+        self._velocities: dict[int, tuple[float, float]] = {}  # (dx, dy)
         self._maxlen  = maxlen
         self._next_id = 1 
         self._confirm_frames = 3
-
-    def _match(self, cx, cy):
-        best_id, best_dist = None, 150 
-        for tid, dq in self._trails.items():
-            if dq:
-                d = math.hypot(cx - dq[-1][0], cy - dq[-1][1])
-                if d < best_dist:
-                    best_dist, best_id = d, tid
-        return best_id
+        self._max_dist = 80  # Reduced for precision
 
     def update(self, hits: list[dict]) -> list[dict]:
-        """Returns the assigned and confirmed target hits."""
-        matched = set()
-        
-        for hit in hits:
-            bx, by, bw, bh = hit["box"]
-            cx, cy = bx + bw // 2, by + bh // 2
+        """Returns the assigned and confirmed target hits using stable Hungarian matching."""
+        tids = list(self._trails.keys())
+        num_targets = len(tids)
+        num_hits = len(hits)
+        matched_hits = set()
+        matched_tids = set()
+
+        # 1. Build cost matrix (Target x Hit)
+        if num_targets > 0 and num_hits > 0:
+            cost_matrix = np.zeros((num_targets, num_hits))
+            for i, tid in enumerate(tids):
+                dq = self._trails[tid]
+                lx, ly = dq[-1]
+                # Try to predict next spot using velocity
+                dx, dy = self._velocities.get(tid, (0.0, 0.0))
+                px, py = lx + dx, ly + dy
+                
+                for j, hit in enumerate(hits):
+                    bx, by, bw, bh = hit["box"]
+                    cx, cy = bx + bw // 2, by + bh // 2
+                    # Cost is distance from predicted position
+                    cost_matrix[i, j] = math.hypot(cx - px, cy - py)
+
+            # 2. Hungarian Matching
+            t_indices, h_indices = linear_sum_assignment(cost_matrix)
             
-            tid = self._match(cx, cy)
-            if tid is None:
+            # 3. Process matches
+            for t_idx, h_idx in zip(t_indices, h_indices):
+                dist = cost_matrix[t_idx, h_idx]
+                if dist < self._max_dist:
+                    tid = tids[t_idx]
+                    hit = hits[h_idx]
+                    matched_hits.add(h_idx)
+                    matched_tids.add(tid)
+                    
+                    # Update target
+                    bx, by, bw, bh = hit["box"]
+                    cx, cy = bx + bw // 2, by + bh // 2
+                    
+                    # Calculate velocity for next frame (smoothed)
+                    lx, ly = self._trails[tid][-1]
+                    new_dx, new_dy = cx - lx, cy - ly
+                    prev_dx, prev_dy = self._velocities.get(tid, (new_dx, new_dy))
+                    self._velocities[tid] = (0.7*new_dx + 0.3*prev_dx, 0.7*new_dy + 0.3*prev_dy)
+
+                    # Update history
+                    self._trails[tid].append((cx, cy))
+                    self._box_history[tid].append(hit["box"])
+                    self._missed[tid] = 0
+                    self._hits[tid] += 1
+                    self._last_hit[tid] = hit
+                    hit["tid"] = tid
+
+        # 4. Handle unmatched hits (New Targets)
+        for j, hit in enumerate(hits):
+            if num_targets == 0 or j not in matched_hits:
                 tid = self._next_id
                 self._next_id += 1
+                bx, by, bw, bh = hit["box"]
+                cx, cy = bx + bw // 2, by + bh // 2
+                
                 self._trails[tid] = collections.deque(maxlen=self._maxlen)
+                self._trails[tid].append((cx, cy))
                 self._missed[tid] = 0
-                self._hits[tid] = 0
+                self._hits[tid] = 1
                 self._box_history[tid] = collections.deque(maxlen=5)
+                self._box_history[tid].append(hit["box"])
+                self._velocities[tid] = (0.0, 0.0)
+                self._last_hit[tid] = hit
+                hit["tid"] = tid
+                matched_tids.add(tid)
 
-            # EMA Position Smoothing
-            if len(self._trails[tid]) > 0:
-                lx, ly = self._trails[tid][-1]
-                cx = int((cx * 0.4) + (lx * 0.6))
-                cy = int((cy * 0.4) + (ly * 0.6))
-
-            self._trails[tid].append((cx, cy))
-            self._box_history[tid].append(hit["box"])
-            self._missed[tid] = 0
-            self._hits[tid] += 1
-            self._last_hit[tid] = hit
-            hit["tid"] = tid
-            matched.add(tid)
-
+        # 5. Handle unmatched targets (Missed Frames)
         active_tracked = []
         for tid in list(self._trails.keys()):
-            # Temporal confirmation logic
             is_confirmed = (self._hits[tid] >= self._confirm_frames)
             
-            if tid in matched:
+            if tid in matched_tids:
                 if is_confirmed:
-                    # Smooth the box dimensions
+                    # Smoothing logic (as approved before)
                     hist = self._box_history[tid]
                     avg_box = np.mean(hist, axis=0).astype(int)
                     hit = self._last_hit[tid].copy()
                     hit["box"] = tuple(avg_box.tolist())
                     active_tracked.append(hit)
             else:
-                self._missed[tid] = self._missed.get(tid, 0) + 1
+                self._missed[tid] += 1
                 if self._missed[tid] > 12: 
                     del self._trails[tid]
                     del self._missed[tid]
                     del self._hits[tid]
                     del self._last_hit[tid]
                     del self._box_history[tid]
+                    if tid in self._velocities: del self._velocities[tid]
                 else:
-                    # Coasting (predictive forward point)
-                    if len(self._trails[tid]) >= 2:
-                        dx = self._trails[tid][-1][0] - self._trails[tid][-2][0]
-                        dy = self._trails[tid][-1][1] - self._trails[tid][-2][1]
-                        nx = self._trails[tid][-1][0] + dx
-                        ny = self._trails[tid][-1][1] + dy
-                        self._trails[tid].append((nx, ny))
-                        
-                        if is_confirmed:
-                            coasted_hit = self._last_hit[tid].copy()
-                            last_box = coasted_hit["box"]
-                            coasted_hit["box"] = (int(nx - last_box[2]//2), int(ny - last_box[3]//2), last_box[2], last_box[3])
-                            coasted_hit["confidence"] *= 0.85
-                            coasted_hit["source"] = "coast"
-                            active_tracked.append(coasted_hit)
+                    # In missed frames, do not guess position (as approved before)
+                    pass
 
         return active_tracked
 
@@ -863,8 +887,8 @@ def run(source, weights: str, conf: float, show_window: bool,
                     area_a = box[2] * box[3]
                     area_b = k_box[2] * k_box[3]
                     ioa = inter / float(min(area_a, area_b) + 1e-6)
-                    # If 65% of the smaller box overlaps the larger box = duplicate target
-                    if ioa > 0.65:  
+                    # If 85% of the smaller box overlaps the larger box = duplicate target
+                    if ioa > 0.85:  
                         duplicate = True
                         break
                 
@@ -873,8 +897,8 @@ def run(source, weights: str, conf: float, show_window: bool,
                 cx_b, cy_b = k_box[0] + k_box[2]/2, k_box[1] + k_box[3]/2
                 dist = math.hypot(cx_a - cx_b, cy_a - cy_b)
                 
-                # Use a hard minimum of 20 pixels so small boxes still merge properly
-                if dist < max(20.0, min(box[2], box[3]) * 0.60):
+                # Use a hard minimum of 12 pixels for separation
+                if dist < max(12.0, min(box[2], box[3]) * 0.40):
                     duplicate = True
                     break
                     
@@ -960,7 +984,7 @@ def _centre_dist(a, b):
     )
 
 
-def _dedup_detections(detections: list, iou_thresh: float = 0.30) -> list:
+def _dedup_detections(detections: list, iou_thresh: float = 0.50) -> list:
     """
     Remove duplicate flame detections.
     Two criteria — either overlapping boxes (IoU) OR very close centres
@@ -970,14 +994,14 @@ def _dedup_detections(detections: list, iou_thresh: float = 0.30) -> list:
     for d in sorted(detections, key=lambda x: -x["confidence"]):
         box = d["box"]
         # Min side of current box — used to set the centre-distance threshold
-        min_side = max(10, min(box[2], box[3]))
+        min_side = max(8, min(box[2], box[3]))
         duplicate = False
         for k in keep:
             if _iou(box, k["box"]) > iou_thresh:
                 duplicate = True
                 break
-            # Two detections whose centres are within 0.5× the box size = same missile
-            if _centre_dist(box, k["box"]) < min_side * 0.50:
+            # Two detections whose centres are within 0.35× the box size = same missile
+            if _centre_dist(box, k["box"]) < min_side * 0.35:
                 duplicate = True
                 break
         if not duplicate:
@@ -1033,8 +1057,8 @@ def parse_args():
     p.add_argument("--save", action="store_true", help="Save to output_tracked.mp4")
 
     # Night flame detector tuning
-    p.add_argument("--bright-thresh", type=int, default=200,
-                   help="Pixel brightness (0-255) to count as flame/glow (default 200; lower=more sensitive)")
+    p.add_argument("--bright-thresh", type=int, default=170,
+                   help="Pixel brightness (0-255) to count as flame/glow (default 170; lower=more sensitive)")
     p.add_argument("--min-flame-area", type=int, default=5,
                    help="Minimum bright blob area in pixels to count as missile flame (default 5)")
 
