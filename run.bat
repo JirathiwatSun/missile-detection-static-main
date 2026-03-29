@@ -31,7 +31,7 @@ SET EDGE_MARGIN=0.06
 REM MAX_ASPECT: (2.0-8.0) Rejects long flat bars. Missile flames are usually sharp dots.
 SET MAX_ASPECT=6.0
 REM GROUND_FRAC: (0.50-0.90) 0.70 means ignore the bottom 30% of frame (city lights).
-SET GROUND_FRAC=0.75
+SET GROUND_FRAC=0.90
 
 REM --- Static Light Filter ---
 REM STATIC_GRID: (20-60) Precision of the filter. Smaller = more precise grid.
