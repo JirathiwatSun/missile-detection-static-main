@@ -56,8 +56,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_WEIGHTS = os.path.join(BASE_DIR, "models", "yolo26n_custom.pt")
 FALLBACK_WEIGHTS = os.path.join(BASE_DIR, "models", "missile.pt")
 
-AUTO_NIGHT_THRESHOLD = 60   # mean brightness → night mode
-TRAIL_LENGTH         = 30   # frames of motion trail kept
+AUTO_NIGHT_THRESHOLD = 60   # default mean brightness for day/night switch
+TRAIL_LENGTH         = 30   # default frames of motion trail kept
 
 MISSILE_CLASS_KEYWORDS = {
     "missile", "rocket", "agm", "aim", "sky-rocket",
@@ -98,15 +98,18 @@ class NightFlameDetector:
       • Frame-edge exclusion — channel logos and tickers live at the edges
     """
 
-    def __init__(self, bright_thresh: int = 200, min_area_px: int = 20,
+    def __init__(self, bright_thresh: int = 170, 
+                 min_area_px: int = 5,
                  max_area_px: int = 150000,
                  edge_margin_frac: float = 0.06,
-                 max_aspect_ratio: float = 6.0):
+                 max_aspect_ratio: float = 6.0,
+                 ground_y_frac: float = 0.70):
         self.bright_thresh      = bright_thresh
         self.min_area           = min_area_px
         self.max_area           = max_area_px
         self.edge_margin_frac   = edge_margin_frac   # fraction of frame to ignore at borders
         self.max_aspect_ratio   = max_aspect_ratio   # blobs wider/taller than this = text/bars
+        self.ground_y_frac      = ground_y_frac
         self.bg_subtractor      = cv2.createBackgroundSubtractorMOG2(history=150, varThreshold=35, detectShadows=False)
 
     def detect(self, frame) -> list[dict]:
@@ -149,8 +152,8 @@ class NightFlameDetector:
 
             # ── Filter 1: Edge & Ground Exclusion ───────────────────────────
             # Skip blobs at the very top/left/right edge of the frame (logos/text)
-            # ALSO completely ignore the bottom 30% of the screen (city lights, ground clutter)
-            ground_y = int(h_fr * 0.70)
+            # ALSO completely ignore the bottom portion of the screen (city lights, ground clutter)
+            ground_y = int(h_fr * self.ground_y_frac)
             if cx < mg or cx > w_fr - mg or cy < mg or cy > ground_y:
                 continue
 
@@ -355,7 +358,10 @@ def apply_nvg_display(frame):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class MissileTrail:
-    def __init__(self, maxlen=TRAIL_LENGTH):
+    def __init__(self, maxlen=TRAIL_LENGTH, 
+                 confirm_frames=3, 
+                 max_dist=80, 
+                 max_missed=12):
         self._trails: dict[int, collections.deque] = {}
         self._missed: dict[int, int] = {}
         self._hits: dict[int, int] = {}
@@ -364,8 +370,9 @@ class MissileTrail:
         self._velocities: dict[int, tuple[float, float]] = {}  # (dx, dy)
         self._maxlen  = maxlen
         self._next_id = 1 
-        self._confirm_frames = 3
-        self._max_dist = 80  # Reduced for precision
+        self._confirm_frames = confirm_frames
+        self._max_dist = max_dist
+        self._max_missed = max_missed
 
     def update(self, hits: list[dict]) -> list[dict]:
         """Returns the assigned and confirmed target hits using stable Hungarian matching."""
@@ -455,7 +462,7 @@ class MissileTrail:
                     active_tracked.append(hit)
             else:
                 self._missed[tid] += 1
-                if self._missed[tid] > 12: 
+                if self._missed[tid] > self._max_missed: 
                     del self._trails[tid]
                     del self._missed[tid]
                     del self._hits[tid]
@@ -677,7 +684,14 @@ def print_status(frame_idx, fps, total_missiles, night_mode):
 def run(source, weights: str, conf: float, show_window: bool,
         force_night: bool, force_day: bool,
         night_sensitivity: int, save_output: bool,
-        bright_thresh: int, min_flame_area: int) -> None:
+        bright_thresh: int, min_flame_area: int,
+        max_flame_area: int, edge_margin: float,
+        max_aspect_ratio: float, ground_fraction: float,
+        static_grid: int, static_world_thresh: int,
+        static_cam_thresh: int, static_decay: int,
+        trail_length: int, track_max_dist: int,
+        track_confirm: int, track_missed: int,
+        default_filter: str) -> None:
 
     try:
         from ultralytics import YOLO
@@ -694,9 +708,18 @@ def run(source, weights: str, conf: float, show_window: bool,
 
     flame_detector = NightFlameDetector(
         bright_thresh=bright_thresh,
-        min_area_px=min_flame_area
+        min_area_px=min_flame_area,
+        max_area_px=max_flame_area,
+        edge_margin_frac=edge_margin,
+        max_aspect_ratio=max_aspect_ratio,
+        ground_y_frac=ground_fraction
     )
-    static_filter = StaticLightFilter()
+    static_filter = StaticLightFilter(
+        grid_size=static_grid,
+        world_thresh=static_world_thresh,
+        cam_thresh=static_cam_thresh,
+        decay=static_decay
+    )
 
     class_names = model.names
 
@@ -726,14 +749,19 @@ def run(source, weights: str, conf: float, show_window: bool,
         writer   = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*"mp4v"), fps_src, (W, H))
         print(f"[INFO] Saving to: {out_path}")
 
-    trail_yolo  = MissileTrail(maxlen=TRAIL_LENGTH + 10)  # unified trail for all missiles
+    trail_yolo  = MissileTrail(
+        maxlen=trail_length, 
+        confirm_frames=track_confirm,
+        max_dist=track_max_dist,
+        max_missed=track_missed
+    )  # unified trail for all missiles
 
     frame_idx             = 0
     fps                   = 0.0
     paused                = False
     night_mode            = force_night
     manual_night_override = None  # Tracks user 'N' key forced mode
-    display_filter        = "thermal"  # 'thermal', 'nvg', 'original'
+    display_filter        = default_filter  # 'thermal', 'nvg', 'original'
     prev_time             = time.perf_counter()
     prev_threat           = "CLEAR"
     annotated             = None
@@ -1058,9 +1086,41 @@ def parse_args():
 
     # Night flame detector tuning
     p.add_argument("--bright-thresh", type=int, default=170,
-                   help="Pixel brightness (0-255) to count as flame/glow (default 170; lower=more sensitive)")
+                   help="Pixel brightness (0-255) to count as flame/glow (default 170)")
     p.add_argument("--min-flame-area", type=int, default=5,
-                   help="Minimum bright blob area in pixels to count as missile flame (default 5)")
+                   help="Minimum bright blob area in pixels (default 5)")
+    p.add_argument("--max-flame-area", type=int, default=150000,
+                   help="Maximum bright blob area in pixels (default 150000)")
+    p.add_argument("--edge-margin", type=float, default=0.06,
+                   help="Edge margin fraction to ignore (default 0.06)")
+    p.add_argument("--max-aspect-ratio", type=float, default=6.0,
+                   help="Maximum aspect ratio for flame blobs (default 6.0)")
+    p.add_argument("--ground-fraction", type=float, default=0.70,
+                   help="Fraction of screen from top to search (ignore bottom) (default 0.70)")
+
+    # Static Light Filter tuning
+    p.add_argument("--static-grid", type=int, default=30,
+                   help="Grid size for static light filtering (default 30)")
+    p.add_argument("--static-world-thresh", type=int, default=8,
+                   help="Frames to suppress world-static lights (default 8)")
+    p.add_argument("--static-cam-thresh", type=int, default=25,
+                   help="Frames to suppress camera-static UI/logos (default 25)")
+    p.add_argument("--static-decay", type=int, default=12,
+                   help="Frames before a static light is forgotten (default 12)")
+
+    # Tracking tuning
+    p.add_argument("--trail-length", type=int, default=TRAIL_LENGTH,
+                   help=f"Number of frames to keep in motion trail (default {TRAIL_LENGTH})")
+    p.add_argument("--track-max-dist", type=int, default=80,
+                   help="Maximum pixel distance for frame-to-frame association (default 80)")
+    p.add_argument("--track-confirm", type=int, default=3,
+                   help="Frames required to confirm a new track (default 3)")
+    p.add_argument("--track-missed", type=int, default=12,
+                   help="Frames to keep a track alive without hits (default 12)")
+
+    # Display
+    p.add_argument("--default-filter", choices=["thermal", "nvg", "original"], default="thermal",
+                   help="Default visual filter in night mode (default thermal)")
 
     return p.parse_args()
 
@@ -1069,14 +1129,27 @@ if __name__ == "__main__":
     args   = parse_args()
     source = args.video if args.video else args.cam
     run(
-        source            = source,
-        weights           = args.weights,
-        conf              = args.conf,
-        show_window       = not args.no_window,
-        force_night       = args.night,
-        force_day         = args.day,
-        night_sensitivity = args.night_sensitivity,
-        save_output       = args.save,
-        bright_thresh     = args.bright_thresh,
-        min_flame_area    = args.min_flame_area,
+        source              = source,
+        weights             = args.weights,
+        conf                = args.conf,
+        show_window         = not args.no_window,
+        force_night         = args.night,
+        force_day           = args.day,
+        night_sensitivity   = args.night_sensitivity,
+        save_output         = args.save,
+        bright_thresh       = args.bright_thresh,
+        min_flame_area      = args.min_flame_area,
+        max_flame_area      = args.max_flame_area,
+        edge_margin         = args.edge_margin,
+        max_aspect_ratio    = args.max_aspect_ratio,
+        ground_fraction     = args.ground_fraction,
+        static_grid         = args.static_grid,
+        static_world_thresh = args.static_world_thresh,
+        static_cam_thresh   = args.static_cam_thresh,
+        static_decay        = args.static_decay,
+        trail_length        = args.trail_length,
+        track_max_dist      = args.track_max_dist,
+        track_confirm       = args.track_confirm,
+        track_missed        = args.track_missed,
+        default_filter      = args.default_filter,
     )
