@@ -89,4 +89,37 @@ If you want to customize the AI to detect specific types of projectiles, follows
 > **Low FPS:** Ensure your laptop is plugged in. The YOLO engine performs best on a dedicated GPU (RTX 4060 or better).
 
 ---
+
+## 🤝 Collaboration & Git Basics
+
+If you are working on this project with a team, follow these simple commands to keep your code up to date and share your changes.
+
+### 1. Get the Latest Code (Before you start)
+Always run this to make sure you have the newest version from your friends:
+```bash
+git pull origin main
+```
+
+### 2. Save Your Changes (Local)
+When you have finished making changes, "save" them to your local history:
+```bash
+# Stage all your changed files
+git add .
+
+# Create a save point with a message
+git commit -m "Added new features or fixed bugs"
+```
+
+### 3. Share Your Work (To GitHub)
+Send your saved changes so your friends can see them:
+```bash
+git push origin main
+```
+
+> [!TIP]
+> **Not sure what changed?** Run `git status` anytime to see which files you have modified!
+
+---
+
 *This project is built for tactical research and educational purposes. Always ensure you are following local regulations regarding the use of such software.*
+
