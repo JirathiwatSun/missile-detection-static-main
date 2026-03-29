@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Iron Dome Missile Tracker — Day/Night Edition v3
-=================================================
+Iron Dome Missile Tracker — Day/Night Edition v3 (with PPI Radar)
+=================================================================
 Day mode  → YOLOv8 shape detection (missile silhouette)
 Night mode → DUAL engine:
                1. YOLOv8 (low-conf fallback for shape)
@@ -85,19 +85,6 @@ THREAT_ALERT   = (0, 0, 255)
 # ─────────────────────────────────────────────────────────────────────────────
 
 class NightFlameDetector:
-    """
-    Detects missiles at night as bright MOVING objects — propellant flame / exhaust dot.
-
-    Signals combined (AND):
-      1. Bright-spot mask  — high intensity pixels = flame glow
-      2. Motion mask (MOG2) — only objects that MOVE against the background
-
-    Additional shape filters:
-      • Aspect-ratio reject  — wide flat blobs = text bars / banners (not missiles)
-      • Max area cap        — huge blobs = explosions / full-screen flare
-      • Frame-edge exclusion — channel logos and tickers live at the edges
-    """
-
     def __init__(self, bright_thresh: int = 170, 
                  min_area_px: int = 5,
                  max_area_px: int = 150000,
@@ -107,35 +94,26 @@ class NightFlameDetector:
         self.bright_thresh      = bright_thresh
         self.min_area           = min_area_px
         self.max_area           = max_area_px
-        self.edge_margin_frac   = edge_margin_frac   # fraction of frame to ignore at borders
-        self.max_aspect_ratio   = max_aspect_ratio   # blobs wider/taller than this = text/bars
+        self.edge_margin_frac   = edge_margin_frac   
+        self.max_aspect_ratio   = max_aspect_ratio   
         self.ground_y_frac      = ground_y_frac
         self.bg_subtractor      = cv2.createBackgroundSubtractorMOG2(history=150, varThreshold=35, detectShadows=False)
 
     def detect(self, frame) -> list[dict]:
         h_fr, w_fr = frame.shape[:2]
-
-        # Exclusion margins (top, bottom, left, right) in pixels
         mg = int(self.edge_margin_frac * min(h_fr, w_fr))
-
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # ── Signal 1: Bright-spot mask ────────────────────────────────────
         _, bright_mask = cv2.threshold(gray, self.bright_thresh, 255, cv2.THRESH_BINARY)
-        # ── Signal 2: MOG2 Motion Flow mask ───────────────────────────────
         motion_mask = self.bg_subtractor.apply(frame)
         _, motion_mask = cv2.threshold(motion_mask, 127, 255, cv2.THRESH_BINARY)
 
-        # Intersect bright spots with active motion flow
         flow_mask = cv2.bitwise_and(bright_mask, motion_mask)
-
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         flow_mask = cv2.dilate(flow_mask, kernel, iterations=1)
         flow_mask = cv2.morphologyEx(flow_mask, cv2.MORPH_CLOSE, kernel)
 
-        num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(
-            flow_mask, connectivity=8
-        )
+        num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(flow_mask, connectivity=8)
 
         detections = []
         for i in range(1, num_labels):
@@ -150,20 +128,15 @@ class NightFlameDetector:
             cx = int(centroids[i][0])
             cy = int(centroids[i][1])
 
-            # ── Filter 1: Edge & Ground Exclusion ───────────────────────────
-            # Skip blobs at the very top/left/right edge of the frame (logos/text)
-            # ALSO completely ignore the bottom portion of the screen (city lights, ground clutter)
             ground_y = int(h_fr * self.ground_y_frac)
             if cx < mg or cx > w_fr - mg or cy < mg or cy > ground_y:
                 continue
 
-            # ── Filter 2: Aspect ratio (reject wide/tall text/scatter) ───────────
             if bh > 0 and bw > 0:
                 aspect = max(bw, bh) / min(bw, bh)
                 if aspect > self.max_aspect_ratio:
-                    continue   # Very elongated strip = text bar / streak, not missile dot
+                    continue   
 
-            # Pad box for visibility
             pad = 12
             bx = max(0, bx - pad)
             by = max(0, by - pad)
@@ -196,31 +169,10 @@ class NightFlameDetector:
 # ───────────────────────────────────────────────────────────────────────────────
 
 class StaticLightFilter:
-    """
-    Suppresses detections that come from STATIC light sources:
-    city lights, building windows, video text overlays, channel logos.
-
-    Key insight: MISSILES MOVE. A city light / text stays in the same
-    screen region frame after frame.
-
-    Implementation:
-      - Divide the frame into a coarse grid of cells (default 40×40 px).
-      - Count how many consecutive frames each cell has held a bright blob.
-      - If a cell’s count exceeds `static_thresh` → it’s a static light — suppress.
-      - If a cell has NO detection for `decay` frames → reset its counter
-        (handles camera pans that expose new static lights).
-
-    A real missile travels fast enough to leave any 40-px cell within
-    a few frames, so its count stays low and it is NEVER suppressed.
-    """
-
-    def __init__(self, grid_size: int = 30,     # Finer grid for precision
-                 world_thresh: int = 8,      # Suppresses City Lights after only 8 frames
-                 cam_thresh: int = 25,     
-                 decay: int = 12):           # Remembers static lights better during panned motion
+    def __init__(self, grid_size: int = 30, world_thresh: int = 8, cam_thresh: int = 25, decay: int = 12):           
         self.grid_size = grid_size
-        self.world_thresh = world_thresh  # Suppresses City Lights (Static in World)
-        self.cam_thresh = cam_thresh      # Suppresses Burned-in Text/Logos (Static in Camera)
+        self.world_thresh = world_thresh  
+        self.cam_thresh = cam_thresh      
         self.decay = decay
         
         self._w_hits, self._w_abs = {}, {}
@@ -228,8 +180,6 @@ class StaticLightFilter:
 
     def filter(self, detections: list, cam_x: float, cam_y: float) -> list:
         active_w, active_c = set(), set()
-        
-        # 1. Map Detections to Both Grids
         for d in detections:
             bx, by, bw, bh = d["box"]
             cx = bx + bw // 2
@@ -241,7 +191,6 @@ class StaticLightFilter:
             active_c.add(c_cell)
             active_w.add(w_cell)
 
-        # 2. Process Camera-Fixed Matrix (Burned in Text)
         for cell in active_c:
             self._c_hits[cell]   = self._c_hits.get(cell, 0) + 1
             self._c_abs[cell]    = 0
@@ -252,7 +201,6 @@ class StaticLightFilter:
                     del self._c_hits[cell]
                     self._c_abs.pop(cell, None)
 
-        # 3. Process World-Fixed Matrix (City Lights / Ground Structures)
         for cell in active_w:
             self._w_hits[cell]   = self._w_hits.get(cell, 0) + 1
             self._w_abs[cell]    = 0
@@ -263,7 +211,6 @@ class StaticLightFilter:
                     del self._w_hits[cell]
                     self._w_abs.pop(cell, None)
 
-        # 4. Filter Detections
         result = []
         for d in detections:
             bx, by, bw, bh = d["box"]
@@ -273,10 +220,8 @@ class StaticLightFilter:
             c_cell = (cx // self.grid_size, cy // self.grid_size)
             w_cell = (int(cx + cam_x) // self.grid_size, int(cy + cam_y) // self.grid_size)
             
-            if self._c_hits.get(c_cell, 0) > self.cam_thresh:
-                continue  # Screen clutter (Logo/Timestamp)
-            if self._w_hits.get(w_cell, 0) > self.world_thresh:
-                continue  # World clutter (Streetlamps/Buildings)
+            if self._c_hits.get(c_cell, 0) > self.cam_thresh: continue 
+            if self._w_hits.get(w_cell, 0) > self.world_thresh: continue
                 
             result.append(d)
         return result
@@ -293,33 +238,20 @@ class StaticLightFilter:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def apply_night_vision(frame):
-    """
-    Real-time NVG/IR simulation:
-      1. Gaussian denoise
-      2. Bilateral filter (edge-preserving)
-      3. CLAHE on L channel (contrast boost)
-      4. Gamma correction (γ = 0.5 → brighten shadows)
-    """
     denoised = cv2.GaussianBlur(frame, (3, 3), 0)
     denoised = cv2.bilateralFilter(denoised, 5, 50, 50)
-
     lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
     l_ch, a_ch, b_ch = cv2.split(lab)
     clahe = cv2.createCLAHE(clipLimit=3.5, tileGridSize=(8, 8))
     lab_eq = cv2.merge([clahe.apply(l_ch), a_ch, b_ch])
     enhanced = cv2.cvtColor(lab_eq, cv2.COLOR_LAB2BGR)
-
     inv_gamma = 1.0 / 0.5
-    table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)],
-                     dtype=np.uint8)
+    table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)], dtype=np.uint8)
     return cv2.LUT(enhanced, table)
 
-
 def apply_thermal_display(frame):
-    """Grayscale/Thermal FLIR simulation + light scan-lines + vignette."""
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     thermal = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
-
     h, w  = frame.shape[:2]
     Y, X  = np.ogrid[:h, :w]
     dist  = np.sqrt((X - w // 2) ** 2 + (Y - h // 2) ** 2)
@@ -327,20 +259,15 @@ def apply_thermal_display(frame):
     vig   = np.clip(1.0 - (dist / max_d) * 0.50, 0.50, 1.0)
     for c in range(3):
         thermal[:, :, c] = (thermal[:, :, c] * vig).astype(np.uint8)
-
-    # Slight scan-line texture
     thermal[::4, :] = (thermal[::4, :] * 0.85).astype(np.uint8)
     return thermal
 
-
 def apply_nvg_display(frame):
-    """Green phosphor NVG display rendering + scan-lines + vignette."""
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     nvg  = np.zeros_like(frame)
     nvg[:, :, 1] = gray
     nvg[:, :, 0] = (gray * 0.10).astype(np.uint8)
     nvg[:, :, 2] = (gray * 0.05).astype(np.uint8)
-
     h, w  = frame.shape[:2]
     Y, X  = np.ogrid[:h, :w]
     dist  = np.sqrt((X - w // 2) ** 2 + (Y - h // 2) ** 2)
@@ -348,7 +275,6 @@ def apply_nvg_display(frame):
     vig   = np.clip(1.0 - (dist / max_d) * 0.65, 0.35, 1.0)
     for c in range(3):
         nvg[:, :, c] = (nvg[:, :, c] * vig).astype(np.uint8)
-
     nvg[::4, :] = (nvg[::4, :] * 0.4).astype(np.uint8)
     return nvg
 
@@ -358,16 +284,13 @@ def apply_nvg_display(frame):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class MissileTrail:
-    def __init__(self, maxlen=TRAIL_LENGTH, 
-                 confirm_frames=3, 
-                 max_dist=80, 
-                 max_missed=12):
+    def __init__(self, maxlen=TRAIL_LENGTH, confirm_frames=3, max_dist=80, max_missed=12):
         self._trails: dict[int, collections.deque] = {}
         self._missed: dict[int, int] = {}
         self._hits: dict[int, int] = {}
         self._last_hit: dict[int, dict] = {}
         self._box_history: dict[int, collections.deque] = {}
-        self._velocities: dict[int, tuple[float, float]] = {}  # (dx, dy)
+        self._velocities: dict[int, tuple[float, float]] = {}  
         self._maxlen  = maxlen
         self._next_id = 1 
         self._confirm_frames = confirm_frames
@@ -375,33 +298,26 @@ class MissileTrail:
         self._max_missed = max_missed
 
     def update(self, hits: list[dict]) -> list[dict]:
-        """Returns the assigned and confirmed target hits using stable Hungarian matching."""
         tids = list(self._trails.keys())
         num_targets = len(tids)
         num_hits = len(hits)
         matched_hits = set()
         matched_tids = set()
 
-        # 1. Build cost matrix (Target x Hit)
         if num_targets > 0 and num_hits > 0:
             cost_matrix = np.zeros((num_targets, num_hits))
             for i, tid in enumerate(tids):
                 dq = self._trails[tid]
                 lx, ly = dq[-1]
-                # Try to predict next spot using velocity
                 dx, dy = self._velocities.get(tid, (0.0, 0.0))
                 px, py = lx + dx, ly + dy
-                
                 for j, hit in enumerate(hits):
                     bx, by, bw, bh = hit["box"]
                     cx, cy = bx + bw // 2, by + bh // 2
-                    # Cost is distance from predicted position
                     cost_matrix[i, j] = math.hypot(cx - px, cy - py)
 
-            # 2. Hungarian Matching
             t_indices, h_indices = linear_sum_assignment(cost_matrix)
             
-            # 3. Process matches
             for t_idx, h_idx in zip(t_indices, h_indices):
                 dist = cost_matrix[t_idx, h_idx]
                 if dist < self._max_dist:
@@ -410,17 +326,14 @@ class MissileTrail:
                     matched_hits.add(h_idx)
                     matched_tids.add(tid)
                     
-                    # Update target
                     bx, by, bw, bh = hit["box"]
                     cx, cy = bx + bw // 2, by + bh // 2
                     
-                    # Calculate velocity for next frame (smoothed)
                     lx, ly = self._trails[tid][-1]
                     new_dx, new_dy = cx - lx, cy - ly
                     prev_dx, prev_dy = self._velocities.get(tid, (new_dx, new_dy))
                     self._velocities[tid] = (0.7*new_dx + 0.3*prev_dx, 0.7*new_dy + 0.3*prev_dy)
 
-                    # Update history
                     self._trails[tid].append((cx, cy))
                     self._box_history[tid].append(hit["box"])
                     self._missed[tid] = 0
@@ -428,7 +341,6 @@ class MissileTrail:
                     self._last_hit[tid] = hit
                     hit["tid"] = tid
 
-        # 4. Handle unmatched hits (New Targets)
         for j, hit in enumerate(hits):
             if num_targets == 0 or j not in matched_hits:
                 tid = self._next_id
@@ -447,14 +359,11 @@ class MissileTrail:
                 hit["tid"] = tid
                 matched_tids.add(tid)
 
-        # 5. Handle unmatched targets (Missed Frames)
         active_tracked = []
         for tid in list(self._trails.keys()):
             is_confirmed = (self._hits[tid] >= self._confirm_frames)
-            
             if tid in matched_tids:
                 if is_confirmed:
-                    # Smoothing logic (as approved before)
                     hist = self._box_history[tid]
                     avg_box = np.mean(hist, axis=0).astype(int)
                     hit = self._last_hit[tid].copy()
@@ -470,7 +379,6 @@ class MissileTrail:
                     del self._box_history[tid]
                     if tid in self._velocities: del self._velocities[tid]
                 else:
-                    # In missed frames, do not guess position (as approved before)
                     pass
 
         return active_tracked
@@ -495,7 +403,6 @@ class MissileTrail:
 def draw_detection(frame, x1, y1, x2, y2, label, confidence,
                    is_missile: bool, night_mode: bool, frame_idx: int,
                    tid: int, source: str = "yolo"):
-    # ALL threats — whether shape (YOLO) or flame trail — are MISSILE colour
     if is_missile or source == "flame":
         colour = NIGHT_COLOUR_MISSILE if night_mode else DAY_COLOUR_MISSILE
     else:
@@ -504,21 +411,17 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
     if source == "flame" and night_mode:
         colour = NIGHT_COLOUR_FLAME
 
-    # Main box
     cv2.rectangle(frame, (x1, y1), (x2, y2), colour, 1)
 
-    # Bracketing (corners)
     cl, lw = 20, 2
     for sx, sy, dx, dy in [(x1,y1,1,1),(x2,y1,-1,1),(x1,y2,1,-1),(x2,y2,-1,-1)]:
         cv2.line(frame, (sx, sy), (sx + dx*cl, sy),        colour, lw)
         cv2.line(frame, (sx, sy), (sx,         sy + dy*cl), colour, lw)
 
-    # Crosshair inside the box
     cx_m = (x1 + x2) // 2
     cy_m = (y1 + y2) // 2
     cv2.drawMarker(frame, (cx_m, cy_m), colour, cv2.MARKER_CROSS, 10, 1, cv2.LINE_AA)
 
-    # Pulsing lock-on ring
     if is_missile or source == "flame":
         radius = max(35, int(math.hypot(x2-x1, y2-y1) * 0.60))
         pulse  = 0.65 + 0.35 * math.sin(frame_idx * 0.35)
@@ -526,14 +429,11 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
         cv2.circle(frame, (cx_m, cy_m), radius,     rc,                              1, cv2.LINE_AA)
         cv2.circle(frame, (cx_m, cy_m), radius + 6, tuple(int(v*0.35) for v in colour), 1, cv2.LINE_AA)
 
-    # Military telemetry block
     tgt_id = f"TGT-{tid:03d}"
-    
-    # Fake telemetry calculated from position/size
     w_box = x2 - x1
-    rng_km = max(0.5, 2000.0 / (w_box + 1e-5))           # small box = far away
-    alt_m  = max(100.0, (frame.shape[0] - y2) * 18.5)    # high up = higher altitude
-    spd_ms = 450 + (tid * 13) % 200                      # mach ~1.5 - 2.0
+    rng_km = max(0.5, 2000.0 / (w_box + 1e-5))           
+    alt_m  = max(100.0, (frame.shape[0] - y2) * 18.5)    
+    spd_ms = 450 + (tid * 13) % 200                      
     
     dim_c = tuple(int(c * 0.7) for c in colour)
     
@@ -544,7 +444,6 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
         
     cv2.putText(frame, header, (x1, y1-25),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, colour, 1, cv2.LINE_AA)
-    
     cv2.putText(frame, f"RNG: {rng_km:.2f} km", (x2 + 10, y1 + 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.40, dim_c, 1, cv2.LINE_AA)
     cv2.putText(frame, f"ALT: {alt_m:.0f} m", (x2 + 10, y1 + 25),
@@ -554,28 +453,26 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
         
     return frame
 
-
-def draw_hud(frame, missile_count: int, fps: float, paused: bool,
+def draw_hud(frame, active_hits: list, fps: float, paused: bool,
              model_name: str, night_mode: bool, display_filter: str,
              frame_idx: int, brightness: float, threat_level: str):
-    """Rich military-style telemetry and HUD overlay."""
+    """Rich military-style telemetry and HUD overlay with PPI Radar."""
+    
+    missile_count = len(active_hits)
     h, w  = frame.shape[:2]
     hud_c = NIGHT_COLOUR_HUD if night_mode else DAY_COLOUR_HUD
     dim_c = tuple(int(c * 0.6) for c in hud_c)
 
     # ── 1. Center Crosshairs + Pitch Ladder ──────────────────────────────────
     cx, cy = w // 2, h // 2
-    # Main crosshair
     cv2.line(frame, (cx - 40, cy), (cx - 10, cy), hud_c, 1, cv2.LINE_AA)
     cv2.line(frame, (cx + 10, cy), (cx + 40, cy), hud_c, 1, cv2.LINE_AA)
     cv2.line(frame, (cx, cy - 40), (cx, cy - 10), hud_c, 1, cv2.LINE_AA)
     cv2.line(frame, (cx, cy + 10), (cx, cy + 40), hud_c, 1, cv2.LINE_AA)
     cv2.circle(frame, (cx, cy), 2, hud_c, -1)
     
-    # Outer radar ring
     cv2.circle(frame, (cx, cy), 150, dim_c, 1, cv2.LINE_AA)
     
-    # Artificial Horizon / Pitch Ladder (static for effect)
     for p in [-100, -50, 50, 100]:
         pw = 20 if abs(p) == 50 else 40
         cv2.line(frame, (cx - pw - 60, cy + p), (cx - 60, cy + p), dim_c, 1, cv2.LINE_AA)
@@ -583,27 +480,22 @@ def draw_hud(frame, missile_count: int, fps: float, paused: bool,
         cv2.putText(frame, f"{abs(p)}", (cx + pw + 65, cy + p + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.3, dim_c, 1)
 
     # ── 2. Top Banner Overlay ────────────────────────────────────────────────
-    # Darker block behind text
     overlay = frame.copy()
     cv2.rectangle(overlay, (0, 0), (w, 90), (0,0,0), -1)
     cv2.addWeighted(overlay, 0.6, frame, 0.4, 0, frame)
     cv2.line(frame, (0, 90), (w, 90), hud_c, 1)
 
-    # Titles
     cv2.putText(frame, "TACTICAL ENGAGEMENT SYSTEM", (15, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.70, hud_c, 2, cv2.LINE_AA)
     cv2.putText(frame, "IRON DOME MK-III | AIRSPACE SURVEILLANCE", (15, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.45, dim_c, 1, cv2.LINE_AA)
     
-    # System Status (Left)
     cv2.putText(frame, f"SYS OP : NOMINAL", (15, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.40, hud_c, 1, cv2.LINE_AA)
     cv2.putText(frame, f"RADAR  : OMNI-DIRECTIONAL // HIGH RES", (15, 85), cv2.FONT_HERSHEY_SIMPLEX, 0.40, hud_c, 1, cv2.LINE_AA)
 
-    # Center-Right Status
     flt_text = display_filter.upper() if night_mode else "DAYLIGHT"
     cv2.putText(frame, f"FILTER : {flt_text}", (w // 2 - 50, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.40, hud_c, 1, cv2.LINE_AA)
     cv2.putText(frame, f"DATALNK: SECURE UPLINK", (w // 2 - 50, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.40, hud_c, 1, cv2.LINE_AA)
     cv2.putText(frame, f"GPS    : {GLOBAL_GPS}", (w // 2 - 50, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.40, dim_c, 1, cv2.LINE_AA)
 
-    # Right Environment Status
     cv2.putText(frame, f"FPS  : {fps:.1f}", (w - 150, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.45, hud_c, 1, cv2.LINE_AA)
     cv2.putText(frame, f"LUM  : {brightness:.0f}/255", (w - 150, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.40, dim_c, 1, cv2.LINE_AA)
     time_str = time.strftime("%H:%M:%S", time.localtime())
@@ -615,7 +507,6 @@ def draw_hud(frame, missile_count: int, fps: float, paused: bool,
     cv2.addWeighted(overlay2, 0.7, frame, 0.3, 0, frame)
     cv2.line(frame, (0, h-60), (w, h-60), hud_c, 1)
 
-    # Threat Threat Status Box
     if threat_level == "CLEAR":
         tc = THREAT_CLEAR
     elif threat_level == "CAUTION":
@@ -627,18 +518,44 @@ def draw_hud(frame, missile_count: int, fps: float, paused: bool,
     cv2.putText(frame, f"THREAT: {threat_level}", (20, h-25),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0,0,0), 2, cv2.LINE_AA)
 
-    # Active Targets tracker
     count_c = (NIGHT_COLOUR_MISSILE if night_mode else DAY_COLOUR_MISSILE) if missile_count > 0 else dim_c
     cv2.putText(frame, f"ACTIVE TARGETS TRACKED: {missile_count:02d}", (260, h-25),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.65, count_c, 2, cv2.LINE_AA)
 
-    # Controls
     cv2.putText(frame, "ENGAGEMENT PROTOCOLS: [Q] ABORT  [P] HALT  [N] OPTICS  [F] FILTER  [S] RECORD",
                 (w - 600, h - 25), cv2.FONT_HERSHEY_SIMPLEX, 0.40, dim_c, 1, cv2.LINE_AA)
 
     if paused:
         cv2.putText(frame, ">> TACTICAL HOLD <<", (cx - 200, cy - 80),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0,200,255), 2, cv2.LINE_AA)
+
+    # ── 4. PPI Radar (Bottom Right) ─────────────────────────────────────────
+    radar_cx, radar_cy, radar_r = w - 100, h - 145, 60
+    
+    cv2.circle(frame, (radar_cx, radar_cy), radar_r, dim_c, 1)
+    cv2.circle(frame, (radar_cx, radar_cy), radar_r // 2, dim_c, 1)
+    cv2.line(frame, (radar_cx, radar_cy - radar_r), (radar_cx, radar_cy + radar_r), dim_c, 1)
+    cv2.line(frame, (radar_cx - radar_r, radar_cy), (radar_cx + radar_r, radar_cy), dim_c, 1)
+    
+    sweep_angle = (frame_idx * 5) % 360
+    sx = int(radar_cx + radar_r * math.cos(math.radians(sweep_angle)))
+    sy = int(radar_cy + radar_r * math.sin(math.radians(sweep_angle)))
+    cv2.line(frame, (radar_cx, radar_cy), (sx, sy), hud_c, 2)
+
+    for hit in active_hits:
+        hx, hy, hw, hh = hit["box"]
+        rel_x = ((hx + hw/2) - w/2) / (w/2)
+        rel_y = ((hy + hh/2) - h/2) / (h/2)
+        
+        plot_x = int(radar_cx + (rel_x * radar_r))
+        plot_y = int(radar_cy + (rel_y * radar_r))
+        
+        if math.hypot(plot_x - radar_cx, plot_y - radar_cy) <= radar_r:
+            hit_color = NIGHT_COLOUR_MISSILE if night_mode else DAY_COLOUR_MISSILE
+            if hit.get("source") == "flame" and night_mode:
+                hit_color = NIGHT_COLOUR_FLAME
+            cv2.circle(frame, (plot_x, plot_y), 3, hit_color, -1)
+            cv2.circle(frame, (plot_x, plot_y), 6, dim_c, 1)
 
     return frame
 
@@ -658,14 +575,11 @@ def threat_beep(threat_level: str, prev_level: str):
     except Exception:
         pass
 
-
 def get_scene_brightness(frame) -> float:
     return float(np.mean(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)))
 
-
 def is_missile_class(label: str) -> bool:
     return any(kw in label.lower() for kw in MISSILE_CLASS_KEYWORDS)
-
 
 def print_status(frame_idx, fps, total_missiles, night_mode):
     mode = "NIGHT" if night_mode else "DAY  "
@@ -675,7 +589,6 @@ def print_status(frame_idx, fps, total_missiles, night_mode):
         f"[MISSILE] {total_missiles:>3}  {bar}"
     )
     sys.stdout.flush()
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Main loop
@@ -740,7 +653,6 @@ def run(source, weights: str, conf: float, show_window: bool,
     print("[LEGEND] YOLO:N = missile shape detections | FLAME:N = propellant flame/exhaust detections")
     print("-" * 70)
 
-    # Video writer
     writer = None
     if save_output:
         fps_src = cap.get(cv2.CAP_PROP_FPS) or 30
@@ -754,19 +666,18 @@ def run(source, weights: str, conf: float, show_window: bool,
         confirm_frames=track_confirm,
         max_dist=track_max_dist,
         max_missed=track_missed
-    )  # unified trail for all missiles
+    ) 
 
     frame_idx             = 0
     fps                   = 0.0
     paused                = False
     night_mode            = force_night
-    manual_night_override = None  # Tracks user 'N' key forced mode
-    display_filter        = default_filter  # 'thermal', 'nvg', 'original'
+    manual_night_override = None 
+    display_filter        = default_filter 
     prev_time             = time.perf_counter()
     prev_threat           = "CLEAR"
     annotated             = None
 
-    # Optical Ego-Motion State
     prev_gray_small = None
     cam_x, cam_y = 0.0, 0.0
 
@@ -780,7 +691,6 @@ def run(source, weights: str, conf: float, show_window: bool,
         if key == ord("n"):
             night_mode = not night_mode
             manual_night_override = night_mode
-            # Reset flame detector background model on mode switch
             flame_detector.reset()
             static_filter.reset()
             print(f"\n[TOGGLE] {'NIGHT' if night_mode else 'DAY'} mode")
@@ -805,17 +715,11 @@ def run(source, weights: str, conf: float, show_window: bool,
             print("\n[INFO] End of stream.")
             break
 
-        # ── Optical Ego-Motion Tracking (Phase Correlate) ────────────────────
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray_small = cv2.resize(gray_frame, (320, 180)) # Fast Phase Correlate Size
+        gray_small = cv2.resize(gray_frame, (320, 180)) 
         
         if prev_gray_small is not None:
-            # dx, dy is the shift from prev to current.
-            # If camera pans right, image shifts left.
             shift, response = cv2.phaseCorrelate(np.float32(prev_gray_small), np.float32(gray_small))
-            
-            # ONLY update camera coordinates if the algorithm is confident 
-            # (prevents hallucinating movement in a pitch-black sky)
             if response > 0.03: 
                 dx = shift[0] * (frame.shape[1] / 320.0)
                 dy = shift[1] * (frame.shape[0] / 180.0)
@@ -829,39 +733,29 @@ def run(source, weights: str, conf: float, show_window: bool,
         fps = 1.0 / (now - prev_time) if (now - prev_time) > 0 else 0.0
         prev_time = now
 
-        # ── Auto brightness → night mode ──────────────────────────────────────
         brightness = get_scene_brightness(frame)
         if manual_night_override is not None:
             night_mode = manual_night_override
         elif not force_night and not force_day:
             night_mode = brightness < night_sensitivity
 
-        # ── Night-vision preprocessing for inference + display ────────────────
         if night_mode:
             enhanced = apply_night_vision(frame)
         else:
             enhanced = frame
 
-        # ── YOLO inference ────────────────────────────────────────────────────
-        # Lower confidence in night mode — shape may be partially visible
         night_conf = max(0.20, conf - 0.10) if night_mode else conf
         results = model(enhanced, conf=night_conf, verbose=False)[0]
 
-        # ── Night Flame detector (only in night mode) ─────────────────────────
         flame_detections = []
         if night_mode:
-            # Run ONCE on original frame — dark frames preserve hot pixel info better
             flame_detections = flame_detector.detect(frame)
-            # Suppress static bright spots (city lights, text)
             flame_detections = static_filter.filter(flame_detections, cam_x, cam_y)
-            # Deduplicate flame-vs-flame (same blob split into two nearby boxes)
             flame_detections = _dedup_detections(flame_detections, iou_thresh=0.30)
-            # Remove any flame box that overlaps with a YOLO box (YOLO wins — higher quality)
             flame_detections = _remove_yolo_overlaps(
                 flame_detections, results.boxes, class_names, iou_thresh=0.25
             )
 
-        # ── Build display frame ───────────────────────────────────────────────
         if night_mode:
             if display_filter == "thermal":
                 display = apply_thermal_display(enhanced)
@@ -872,7 +766,6 @@ def run(source, weights: str, conf: float, show_window: bool,
         else:
             display = frame.copy()
 
-        # ── Collect all hits (YOLO + Flame) ──────────────────────────────────
         hits = []
         for box in results.boxes:
             confidence = float(box.conf[0])
@@ -892,16 +785,12 @@ def run(source, weights: str, conf: float, show_window: bool,
                 continue
             hits.append(d)
 
-        # ── Global NMS Deduplication (Fix overlapping / duplicated boxes) ────
         final_hits = []
         for h in sorted(hits, key=lambda x: -x["confidence"]):
             box = h["box"]
             duplicate = False
             for keep in final_hits:
                 k_box = keep["box"]
-                
-                # Check Intersection over Minimum Area (IOA)
-                # Safely suppresses tiny boxes sitting inside huge boxes
                 ax1, ay1 = box[0], box[1]
                 ax2, ay2 = ax1 + box[2], ay1 + box[3]
                 bx1, by1 = k_box[0], k_box[1]
@@ -915,17 +804,14 @@ def run(source, weights: str, conf: float, show_window: bool,
                     area_a = box[2] * box[3]
                     area_b = k_box[2] * k_box[3]
                     ioa = inter / float(min(area_a, area_b) + 1e-6)
-                    # If 85% of the smaller box overlaps the larger box = duplicate target
                     if ioa > 0.85:  
                         duplicate = True
                         break
                 
-                # Check absolute Center Distance for fragmented blobs
                 cx_a, cy_a = box[0] + box[2]/2, box[1] + box[3]/2
                 cx_b, cy_b = k_box[0] + k_box[2]/2, k_box[1] + k_box[3]/2
                 dist = math.hypot(cx_a - cx_b, cy_a - cy_b)
                 
-                # Use a hard minimum of 12 pixels for separation
                 if dist < max(12.0, min(box[2], box[3]) * 0.40):
                     duplicate = True
                     break
@@ -934,22 +820,17 @@ def run(source, weights: str, conf: float, show_window: bool,
                 final_hits.append(h)
         hits = final_hits
 
-        # ── Link Targets & Get IDs ───────────────────────────────────────────
         active_hits = trail_yolo.update(hits)
         missile_count = len([h for h in active_hits if h["source"] != "coast"])
 
-        # ── Draw Detections + Trails ─────────────────────────────────────────
         for hit in active_hits:
             bx, by, bw, bh = hit["box"]
             draw_detection(display, bx, by, bx+bw, by+bh,
                            hit["label"], hit["confidence"],
                            True, night_mode, frame_idx, hit["tid"], source=hit["source"])
 
-
-
         trail_yolo.draw(display, night_mode)
 
-        # ── Threat level ──────────────────────────────────────────────────────
         if missile_count == 0:
             threat = "CLEAR"
         elif missile_count <= 2:
@@ -962,14 +843,14 @@ def run(source, weights: str, conf: float, show_window: bool,
             print(f"\n[THREAT] {prev_threat} → {threat}  ({missile_count} missiles)")
             prev_threat = threat
 
-        # ── Terminal ──────────────────────────────────────────────────────────
         print_status(frame_idx, fps, missile_count, night_mode)
 
         # ── HUD ───────────────────────────────────────────────────────────────
         if show_window:
-            annotated = draw_hud(display, missile_count, fps, paused,
+            # We now pass `active_hits` instead of `missile_count`
+            annotated = draw_hud(display, active_hits, fps, paused,
                                  weights, night_mode, display_filter, frame_idx, brightness, threat)
-            cv2.imshow("Iron Dome Missile Tracker", annotated)
+            cv2.imshow("Iron Dome Missile Tracker v3", annotated)
         else:
             annotated = display
 
@@ -989,7 +870,6 @@ def run(source, weights: str, conf: float, show_window: bool,
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _iou(a, b):
-    """IoU for (x,y,w,h) boxes."""
     ax1, ay1 = a[0], a[1]
     ax2, ay2 = ax1 + a[2], ay1 + a[3]
     bx1, by1 = b[0], b[1]
@@ -1003,32 +883,22 @@ def _iou(a, b):
     union = (a[2]*a[3]) + (b[2]*b[3]) - inter
     return inter / union if union > 0 else 0.0
 
-
 def _centre_dist(a, b):
-    """Pixel distance between centres of two (x,y,w,h) boxes."""
     return math.hypot(
         a[0] + a[2]/2 - (b[0] + b[2]/2),
         a[1] + a[3]/2 - (b[1] + b[3]/2)
     )
 
-
 def _dedup_detections(detections: list, iou_thresh: float = 0.50) -> list:
-    """
-    Remove duplicate flame detections.
-    Two criteria — either overlapping boxes (IoU) OR very close centres
-    (handles tiny dot blobs that barely overlap but are the same flame).
-    """
     keep = []
     for d in sorted(detections, key=lambda x: -x["confidence"]):
         box = d["box"]
-        # Min side of current box — used to set the centre-distance threshold
         min_side = max(8, min(box[2], box[3]))
         duplicate = False
         for k in keep:
             if _iou(box, k["box"]) > iou_thresh:
                 duplicate = True
                 break
-            # Two detections whose centres are within 0.35× the box size = same missile
             if _centre_dist(box, k["box"]) < min_side * 0.35:
                 duplicate = True
                 break
@@ -1036,13 +906,8 @@ def _dedup_detections(detections: list, iou_thresh: float = 0.50) -> list:
             keep.append(d)
     return keep
 
-
 def _remove_yolo_overlaps(flame_dets: list, yolo_boxes,
                           class_names: dict, iou_thresh: float = 0.25) -> list:
-    """
-    Suppress any flame detection that significantly overlaps a YOLO detection.
-    YOLO shape detection is higher quality — it wins.
-    """
     if not yolo_boxes or len(yolo_boxes) == 0:
         return flame_dets
 
@@ -1084,7 +949,6 @@ def parse_args():
                    help=f"Brightness threshold for auto night (default {AUTO_NIGHT_THRESHOLD})")
     p.add_argument("--save", action="store_true", help="Save to output_tracked.mp4")
 
-    # Night flame detector tuning
     p.add_argument("--bright-thresh", type=int, default=170,
                    help="Pixel brightness (0-255) to count as flame/glow (default 170)")
     p.add_argument("--min-flame-area", type=int, default=5,
@@ -1098,7 +962,6 @@ def parse_args():
     p.add_argument("--ground-fraction", type=float, default=0.70,
                    help="Fraction of screen from top to search (ignore bottom) (default 0.70)")
 
-    # Static Light Filter tuning
     p.add_argument("--static-grid", type=int, default=30,
                    help="Grid size for static light filtering (default 30)")
     p.add_argument("--static-world-thresh", type=int, default=8,
@@ -1108,7 +971,6 @@ def parse_args():
     p.add_argument("--static-decay", type=int, default=12,
                    help="Frames before a static light is forgotten (default 12)")
 
-    # Tracking tuning
     p.add_argument("--trail-length", type=int, default=TRAIL_LENGTH,
                    help=f"Number of frames to keep in motion trail (default {TRAIL_LENGTH})")
     p.add_argument("--track-max-dist", type=int, default=80,
@@ -1118,7 +980,6 @@ def parse_args():
     p.add_argument("--track-missed", type=int, default=12,
                    help="Frames to keep a track alive without hits (default 12)")
 
-    # Display
     p.add_argument("--default-filter", choices=["thermal", "nvg", "original"], default="thermal",
                    help="Default visual filter in night mode (default thermal)")
 
