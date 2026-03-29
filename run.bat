@@ -55,7 +55,7 @@ SET TRACK_MISSED=12
 
 REM --- Sensitivity & Display ---
 REM NIGHT_SENS: (40-80) Brightness level to automatically switch to Night Mode.
-SET NIGHT_SENS=80
+SET NIGHT_SENS=60
 REM DEF_FILTER: The default filter used at night. Options: thermal, nvg, original.
 SET DEF_FILTER=thermal
 
