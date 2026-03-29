@@ -1,5 +1,10 @@
 # Missile Detection Project Requirements
-# Install with: pip install -r requirements.txt
+# Default CPU Install:    pip install -r requirements.txt
+#
+# FOR NVIDIA GPU USERS:
+# If you have an NVIDIA GPU, you must uninstall the default PyTorch and install the CUDA version:
+#   1. pip uninstall -y torch torchvision torchaudio
+#   2. pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 ultralytics>=8.3.0
 roboflow>=1.2.0

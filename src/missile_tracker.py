@@ -24,6 +24,8 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 import threading
 import json
+if os.name == 'nt':
+    import winsound
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
@@ -71,6 +73,13 @@ THREAT_CLEAR   = (0, 220, 60)
 THREAT_CAUTION = (0, 180, 255)
 THREAT_ALERT   = (0, 0, 255)
 
+# Pre-computed gamma LUT for night-vision shadow recovery (gamma = 0.55)
+# Built once at import time so apply_night_vision() never recomputes it per frame.
+_GAMMA = 0.55
+_GAMMA_LUT = np.array(
+    [((i / 255.0) ** (1.0 / _GAMMA)) * 255 for i in range(256)], dtype=np.uint8
+)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Night Flame Detector
@@ -82,17 +91,23 @@ class NightFlameDetector:
                  max_area_px: int = 50000,
                  edge_margin_frac: float = 0.06,
                  max_aspect_ratio: float = 5.0,
-                 ground_y_frac: float = 0.70):
+                 ground_y_frac: float = 0.70,
+                 cluster_radius: int = 60,
+                 max_cluster_size: int = 4,
+                 mog_history: int = 150,
+                 mog_var_thresh: int = 25):
         self.bright_thresh      = bright_thresh
         self.min_area           = min_area_px
         self.max_area           = max_area_px
         self.edge_margin_frac   = edge_margin_frac   
         self.max_aspect_ratio   = max_aspect_ratio   
         self.ground_y_frac      = ground_y_frac
-        self.cluster_radius     = 60  
-        self.max_cluster_size   = 4   
+        self.cluster_radius     = cluster_radius  
+        self.max_cluster_size   = max_cluster_size   
+        self.mog_history        = mog_history
+        self.mog_var_thresh     = mog_var_thresh
         
-        self.bg_subtractor      = cv2.createBackgroundSubtractorMOG2(history=150, varThreshold=25, detectShadows=False)
+        self.bg_subtractor      = cv2.createBackgroundSubtractorMOG2(history=self.mog_history, varThreshold=self.mog_var_thresh, detectShadows=False)
 
     def detect(self, small_frame, current_ground_frac, proxy_bright_mask=None) -> list[dict]:
         h_fr, w_fr = small_frame.shape[:2]
@@ -166,7 +181,7 @@ class NightFlameDetector:
         return filtered_detections
 
     def reset(self):
-        self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(history=150, varThreshold=25, detectShadows=False)
+        self.bg_subtractor = cv2.createBackgroundSubtractorMOG2(history=self.mog_history, varThreshold=self.mog_var_thresh, detectShadows=False)
 
 
 class StaticLightFilter:
@@ -225,7 +240,6 @@ class StaticLightFilter:
         self._c_hits.clear()
         self._c_abs.clear()
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # AI Enhancement & Night-Vision Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
@@ -246,6 +260,8 @@ def enhance_proxy_for_ai(frame):
     clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
     l_eq = clahe.apply(l)
     return cv2.cvtColor(cv2.merge((l_eq, a, b)), cv2.COLOR_LAB2BGR)
+
+
 
 
 _VIGNETTE_CACHE = {}
@@ -401,7 +417,14 @@ class MissileTrail:
         return active_tracked
 
     def draw(self, frame, night_mode: bool, ui_scale: float):
-        for dq in self._trails.values():
+        for tid, dq in self._trails.items():
+            # If the bounding box is not active (missed a frame, or not confirmed yet),
+            # instantly hide the tail so they are perfectly synced.
+            if self._missed.get(tid, 0) > 0:
+                continue
+            if self._hits.get(tid, 0) < self._confirm_frames:
+                continue
+
             pts = list(dq)
             if len(pts) < 2: continue
             
@@ -536,7 +559,7 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
 def draw_hud(frame, active_hits: list, fps: float, paused: bool,
              night_mode: bool, display_filter: str,
              frame_idx: int, brightness: float, threat_level: str, 
-             ui_scale: float, ground_frac: float):
+             ui_scale: float, ground_frac: float, is_auto_ground: bool):
     
     h, w  = frame.shape[:2]
     hud_c = NIGHT_COLOUR_HUD if night_mode else DAY_COLOUR_HUD
@@ -551,7 +574,9 @@ def draw_hud(frame, active_hits: list, fps: float, paused: bool,
     horizon_y = int(h * ground_frac)
     for x in range(0, w, int(30 * ui_scale)):
         cv2.line(frame, (x, horizon_y), (x + int(15 * ui_scale), horizon_y), (0, 0, 150), lw_fine)
-    cv2.putText(frame, f"GROUND EXCLUSION [{ground_frac:.2f}]", 
+    
+    ground_status = "[AUTO]" if is_auto_ground else "[MAN]"
+    cv2.putText(frame, f"GROUND EXCLUSION {ground_status} [{ground_frac:.2f}]", 
                 (10, horizon_y - int(8*ui_scale)), cv2.FONT_HERSHEY_SIMPLEX, 0.3*ui_scale, (0, 0, 150), font_th, cv2.LINE_AA)
 
     # 2. CIRCULAR TARGETING HUD
@@ -661,8 +686,8 @@ def draw_hud(frame, active_hits: list, fps: float, paused: bool,
     count_c = (NIGHT_COLOUR_MISSILE if night_mode else DAY_COLOUR_MISSILE) if missile_count > 0 else dim_c
     cv2.putText(frame, f"ACTIVE MISSILE TRACKED: {missile_count:02d}", (int(270*ui_scale), h-int(20*ui_scale)), cv2.FONT_HERSHEY_SIMPLEX, threat_f, count_c, font_th_bold, cv2.LINE_AA)
 
-    shortcuts = "[Q] ABORT  [P] HALT  [N] OPTICS  [F] FILTER  [W/S] HORIZON  [C] CAPTURE"
-    font_scale = 0.50 * ui_scale
+    shortcuts = "[Q] ABORT  [P] HALT  [N] OPTICS  [F] FILTER  [G] AUTO-G  [W/S] HORIZON  [C] CAPTURE"
+    font_scale = 0.40 * ui_scale
     (text_width, _), _ = cv2.getTextSize(shortcuts, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_th)
     cv2.putText(frame, shortcuts, (w - text_width - int(20 * ui_scale), h - int(25 * ui_scale)), 
                 cv2.FONT_HERSHEY_SIMPLEX, font_scale, dim_c, font_th, cv2.LINE_AA)
@@ -705,6 +730,53 @@ def get_scene_brightness(frame) -> float:
 def is_missile_class(label: str) -> bool:
     return any(kw in label.lower() for kw in MISSILE_CLASS_KEYWORDS)
 
+def compute_auto_horizon(small_frame):
+    """
+    Detects the topmost edge of the bright ground clutter band.
+    Returns raw detected fraction (0.0–1.0) WITHOUT EMA smoothing.
+    The caller is responsible for applying EMA and clamping.
+    """
+    ana_h, ana_w = 240, 320
+    mini = cv2.resize(small_frame, (ana_w, ana_h))
+    gray = cv2.cvtColor(mini, cv2.COLOR_BGR2GRAY)
+
+    # 90th-percentile row profile — robust against single bright pixels/flares
+    row_profile = np.percentile(gray, 90, axis=1).astype(np.uint8)
+
+    # 7-pixel vertical median smoothing — removes salt-and-pepper spikes
+    row_profile_smoothed = cv2.medianBlur(row_profile.reshape(-1, 1), 7).flatten()
+
+    # Intensity threshold for "ground-level brightness"
+    ground_thresh = 45
+
+    # Only search the bottom 60 % of the frame (rows scan_limit … ana_h-1)
+    # This hard-caps the horizon so the top 40 % is always available for sky/missiles
+    scan_limit = int(ana_h * 0.40)
+
+    # Find the TOPMOST row inside the scan window that starts (or belongs to)
+    # a continuous bright band.  Strategy: scan top-to-bottom inside the scan
+    # window; record the first bright row, then walk down while rows stay bright.
+    # The topmost bright row is our raw horizon estimate.
+    detected_y = ana_h - 1   # default = very bottom (exclude nothing)
+    in_bright_band = False
+    top_of_band = ana_h - 1
+
+    for y in range(scan_limit, ana_h):
+        if row_profile_smoothed[y] > ground_thresh:
+            if not in_bright_band:
+                top_of_band = y      # first row of this bright band
+                in_bright_band = True
+            detected_y = min(detected_y, top_of_band)
+        else:
+            in_bright_band = False
+
+    # Safety bias: push the line significantly upward for confidence margin against tall structures
+    # A 6% bias ensures unlit vertical obstacles (cranes, skyscraper tips) are pushed under the line
+    safety_bias = int(ana_h * 0.06)
+    detected_y = max(scan_limit, detected_y - safety_bias)
+
+    return detected_y / float(ana_h)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Main loop
 # ─────────────────────────────────────────────────────────────────────────────
@@ -714,16 +786,34 @@ def run(source, weights: str, conf: float, show_window: bool,
         bright_thresh: int, min_flame_area: int, max_flame_area: int, edge_margin: float,
         max_aspect_ratio: float, ground_fraction: float, static_grid: int, static_world_thresh: int,
         static_cam_thresh: int, static_decay: int, trail_length: int, track_max_dist: int,
-        track_confirm: int, track_missed: int, default_filter: str) -> None:
+        track_confirm: int, track_missed: int, default_filter: str,
+        cluster_radius: int, cluster_max_size: int,
+        mog_history: int, mog_var_thresh: int,
+        auto_ground_alpha: float, night_conf_offset: float,
+        cam_motion_thresh: float, flame_min_conf: float, device: str) -> None:
 
     try: from ultralytics import YOLO
     except ImportError: sys.exit("[ERROR] ultralytics not installed.")
 
     print(f"[INFO] Loading YOLO model: {weights} ...", end=" ", flush=True)
     model = YOLO(weights)
+    if device:
+        print(f"(device: {device}) ...", end=" ")
+        torch_device = f"cuda:{device}" if str(device).isdigit() else device
+        
+        # Friendly Fallback: Prevent crash if friend's PC lacks an NVIDIA GPU
+        import torch
+        if "cuda" in torch_device and not torch.cuda.is_available():
+            print("\n[WARNING] Hardware GPU requested but not found. Falling back to CPU...", end=" ")
+            torch_device = "cpu"
+            
+        model.to(torch_device)
     print("OK")
 
-    flame_detector = NightFlameDetector(bright_thresh, min_flame_area, max_flame_area, edge_margin, max_aspect_ratio, ground_fraction)
+    flame_detector = NightFlameDetector(
+        bright_thresh, min_flame_area, max_flame_area, edge_margin, max_aspect_ratio, ground_fraction,
+        cluster_radius, cluster_max_size, mog_history, mog_var_thresh
+    )
     static_filter = StaticLightFilter(static_grid, static_world_thresh, static_cam_thresh, static_decay)
     class_names = model.names
 
@@ -745,8 +835,14 @@ def run(source, weights: str, conf: float, show_window: bool,
     
     global ui_sc
     ui_sc = native_h / 720.0
-    
+
+    w_orig = native_w   # safe default so end-of-stream display never raises NameError
     current_ground_frac = ground_fraction
+    is_auto_ground = True
+    # EMA state is kept here, NOT inside compute_auto_horizon, so the
+    # smoothing history persists across frames without double-application.
+    auto_ground_ema   = ground_fraction
+    AUTO_GROUND_ALPHA = auto_ground_alpha
 
     print(f"[INFO] Active Source     : {source}")
     print(f"[INFO] Native Resolution : {native_w}x{native_h}")
@@ -765,32 +861,51 @@ def run(source, weights: str, conf: float, show_window: bool,
     prev_time = time.perf_counter()
     prev_gray_small = None
     cam_x, cam_y = 0.0, 0.0
+    announced_tids = set()
 
     if not (isinstance(source, int) or str(source).isdigit()):
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
+    annotated = None
     try:
         while True:
             key = cv2.waitKey(1) & 0xFF if show_window else 0xFF
-            if key == ord("q"): break
-            if key == ord("p"): paused = not paused
+            if key == ord("q"):
+                if os.name == 'nt': winsound.Beep(800, 200) # Abort: Low descending tone
+                break
+            if key == ord("p"):
+                paused = not paused
+                if os.name == 'nt': winsound.Beep(1400 if paused else 1600, 80) # Pause/Resume
             if key == ord("n"):
                 night_mode = not night_mode
+                if os.name == 'nt': winsound.Beep(1000, 100) # Tactical Mode Toggle
                 manual_night_override = night_mode
                 flame_detector.reset()
                 static_filter.reset()
                 if not night_mode and display_filter == "nvg":
                     display_filter = "original"
             if key == ord("f"):
+                if os.name == 'nt': winsound.Beep(2000, 50) # Optics Filter Switch
                 filters = ["thermal", "nvg", "original"] if night_mode else ["thermal", "original"]
                 idx = (filters.index(display_filter) + 1) % len(filters) if display_filter in filters else 0
                 display_filter = filters[idx]
                 
-            if key == ord("w"): current_ground_frac = max(0.1, current_ground_frac - 0.05)
-            if key == ord("s"): current_ground_frac = min(1.0, current_ground_frac + 0.05)
-            if key == ord("c") and 'annotated' in locals() and annotated is not None:
+            if key == ord("w"): 
+                current_ground_frac = max(0.1, current_ground_frac - 0.05)
+                is_auto_ground = False
+                if os.name == 'nt': winsound.Beep(1200, 50) # Manual Override Feedback
+            if key == ord("s"): 
+                current_ground_frac = min(1.0, current_ground_frac + 0.05)
+                is_auto_ground = False
+                if os.name == 'nt': winsound.Beep(1200, 50) # Manual Override Feedback
+            if key == ord("g"):
+                is_auto_ground = not is_auto_ground
+                if os.name == 'nt': winsound.Beep(1500, 100) # Toggle Auto/Manual
+            if key == ord("c") and annotated is not None:
                 p = os.path.join(BASE_DIR, f"screenshot_{int(time.time())}.png")
                 cv2.imwrite(p, annotated)
+                if os.name == 'nt': # Camera Shutter: 2 quick clicks
+                    threading.Thread(target=lambda: [winsound.Beep(2500, 30), winsound.Beep(1800, 30)], daemon=True).start()
                 print(f"\n[SS] Captured Target Data: {p}")
     
             if paused: time.sleep(0.05); continue
@@ -813,6 +928,12 @@ def run(source, weights: str, conf: float, show_window: bool,
     
             if night_mode:
                 native_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                
+                # Apply Physics-Safe CLAHE contrast to uncover and boost critically faint 
+                # distant targets organically without mathematically corrupting the dark night sky
+                clahe_physics = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+                native_gray = clahe_physics.apply(native_gray)
+                
                 _, native_bright = cv2.threshold(native_gray, bright_thresh, 255, cv2.THRESH_BINARY)
                 star_kernel = np.ones((7, 7), np.uint8)
                 native_bright = cv2.dilate(native_bright, star_kernel, iterations=1)
@@ -823,7 +944,7 @@ def run(source, weights: str, conf: float, show_window: bool,
             gray_small = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
             if prev_gray_small is not None:
                 shift, response = cv2.phaseCorrelate(np.float32(prev_gray_small), np.float32(gray_small))
-                if response > 0.03: 
+                if response > cam_motion_thresh:
                     cam_x -= shift[0]
                     cam_y -= shift[1]
             prev_gray_small = gray_small
@@ -832,18 +953,36 @@ def run(source, weights: str, conf: float, show_window: bool,
             now = time.perf_counter()
             fps = 1.0 / (now - prev_time) if (now - prev_time) > 0 else 0.0
             prev_time = now
+
+            if is_auto_ground:
+                raw_frac = compute_auto_horizon(small_frame)
+                # Single EMA pass here — NOT inside compute_auto_horizon
+                auto_ground_ema = AUTO_GROUND_ALPHA * raw_frac + (1.0 - AUTO_GROUND_ALPHA) * auto_ground_ema
+                # Hard cap: exclusion zone can never exceed bottom 60 % of frame
+                current_ground_frac = max(0.40, min(0.95, auto_ground_ema))
+
+            # Keep the flame detector's horizon in sync with the live ground frac
+            flame_detector.ground_y_frac = current_ground_frac
     
             if night_mode: 
                 small_enhanced = apply_night_vision(small_frame)
             else: 
                 small_enhanced = enhance_proxy_for_ai(small_frame)
     
-            night_conf = max(0.20, conf - 0.10) if night_mode else conf
-            results = model(small_enhanced, conf=night_conf, verbose=False)[0]
+            night_conf = max(0.20, conf - night_conf_offset) if night_mode else conf
+            
+            # Use specified device, or let Ultralytics auto-select if empty
+            inference_kwargs = {"conf": night_conf, "verbose": False}
+            if device: inference_kwargs["device"] = device
+            
+            results = model(small_enhanced, **inference_kwargs)[0]
     
             flame_detections = []
             if night_mode:
-                flame_detections = flame_detector.detect(small_frame, current_ground_frac, proxy_bright_mask)
+                # The user explicitly requested forcing the AI Enhancement illusion 
+                # strictly into the Physics detector! We disable the native mask so 
+                # the physics engine natively reads the YOLO proxy for its math.
+                flame_detections = flame_detector.detect(small_enhanced, current_ground_frac, proxy_bright_mask=None)
                 flame_detections = static_filter.filter(flame_detections, cam_x, cam_y)
     
             if display_filter == "thermal": 
@@ -854,21 +993,33 @@ def run(source, weights: str, conf: float, show_window: bool,
                 display = frame.copy()
                 display_filter = "original" if display_filter == "nvg" else display_filter
     
+            # Ground exclusion threshold in original-frame pixel coordinates
+            ground_y_orig = int(h_orig * current_ground_frac)
+
             hits = []
             for box in results.boxes:
                 label = class_names.get(int(box.cls[0]), f"cls")
                 if is_missile_class(label):
                     x1, y1, x2, y2 = box.xyxy[0].tolist()
+                    # Scale to original frame coordinates
+                    ox1 = int(round(x1 * scale_x))
+                    oy1 = int(round(y1 * scale_y))
+                    ox2 = int(round(x2 * scale_x))
+                    oy2 = int(round(y2 * scale_y))
+                    # Centre-of-box ground exclusion: skip detections whose
+                    # centre sits below (or at) the horizon line
+                    cy_box = (oy1 + oy2) // 2
+                    if cy_box >= ground_y_orig:
+                        continue
                     hits.append({
-                        "box": (int(round(x1*scale_x)), int(round(y1*scale_y)), 
-                                int(round((x2-x1)*scale_x)), int(round((y2-y1)*scale_y))),
+                        "box": (ox1, oy1, ox2 - ox1, oy2 - oy1),
                         "label": label,
                         "confidence": float(box.conf[0]),
                         "source": "yolo"
                     })
     
             for d in flame_detections:
-                if d["confidence"] >= 0.35:
+                if d["confidence"] >= flame_min_conf:
                     bx, by, bw, bh = d["box"]
                     d["box"] = (int(round(bx*scale_x)), int(round(by*scale_y)), 
                                 int(round(bw*scale_x)), int(round(bh*scale_y)))
@@ -891,11 +1042,41 @@ def run(source, weights: str, conf: float, show_window: bool,
     
             active_hits = trail_yolo.update(final_hits)
             missile_count = len(active_hits)
+
+            # Prune announced_tids so reused IDs can trigger a new lock-on sound
+            active_tids = {h["tid"] for h in active_hits}
+            announced_tids &= active_tids
+
+            # --- TACTICAL AUDIO FEEDBACK SYSTEM ---
+            if os.name == 'nt' and missile_count > 0:
+                new_locks = [h for h in active_hits if h["tid"] not in announced_tids]
+                
+                if new_locks:
+                    # INITIAL ACQUISITION (Triple-Rise Sequence)
+                    for h in new_locks: announced_tids.add(h["tid"])
+                    def lock_sound():
+                        for freq in [1500, 2000, 2500]:
+                            winsound.Beep(freq, 100)
+                    threading.Thread(target=lock_sound, daemon=True).start()
+                
+                elif frame_idx % 15 == 0:
+                    # CONTINUOUS TRACKING (Source-Dependent Pulses)
+                    is_flame = any(h.get("source") == "flame" for h in active_hits)
+                    
+                    if is_flame:
+                        # IR Detection: Low-pitch Blip (1300Hz)
+                        threading.Thread(target=lambda: winsound.Beep(1300, 50), daemon=True).start()
+                    else:
+                        # YOLO Detection: Tactical Ping (1800Hz)
+                        threading.Thread(target=lambda: winsound.Beep(1800, 80), daemon=True).start()
     
             for hit in active_hits:
                 bx, by, bw, bh = hit["box"]
+                # is_missile=True for YOLO missile-class hits and flame (IR) hits.
+                # Any future non-missile YOLO class that slips through gets False.
+                is_missile_hit = is_missile_class(hit.get("label", "")) or hit.get("source") == "flame"
                 draw_detection(display, bx, by, bx+bw, by+bh, hit["label"], hit["confidence"],
-                               True, night_mode, frame_idx, hit["tid"], ui_sc, 
+                               is_missile_hit, night_mode, frame_idx, hit["tid"], ui_sc, 
                                dx=hit.get("dx", 0.0), dy=hit.get("dy", 0.0), source=hit["source"])
     
             trail_yolo.draw(display, night_mode, ui_sc)
@@ -906,7 +1087,7 @@ def run(source, weights: str, conf: float, show_window: bool,
             sys.stdout.flush()
     
             if show_window:
-                annotated = draw_hud(display, active_hits, fps, paused, night_mode, display_filter, frame_idx, brightness, threat, ui_sc, current_ground_frac)
+                annotated = draw_hud(display, active_hits, fps, paused, night_mode, display_filter, frame_idx, brightness, threat, ui_sc, current_ground_frac, is_auto_ground)
                 cv2.imshow("Iron Dome Missile Tracker v3", cv2.resize(annotated, (1280, 720)) if w_orig > 1920 else annotated)
             else:
                 annotated = display
@@ -919,7 +1100,7 @@ def run(source, weights: str, conf: float, show_window: bool,
         traceback.print_exc()
 
     print("\n[INFO] Video stream ended or aborted.")
-    if show_window:
+    if show_window and annotated is not None:
         print("[INFO] Press any key on the video window to close...")
         cv2.putText(annotated, ">> END OF STREAM / PRESS ANY KEY TO EXIT <<", (100, 100), 
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2, cv2.LINE_AA)
@@ -959,34 +1140,57 @@ def parse_args():
     p.add_argument("--track-confirm", type=int, default=3)
     p.add_argument("--track-missed", type=int, default=12)
     p.add_argument("--default-filter", choices=["thermal", "nvg", "original"], default="thermal")
+    # IR detector - clustering
+    p.add_argument("--cluster-radius",    type=int,   default=60,   help="Pixel radius for city-light cluster rejection")
+    p.add_argument("--cluster-max-size",  type=int,   default=4,    help="Max neighbors before blob is rejected as city light")
+    # IR detector - background subtractor
+    p.add_argument("--mog-history",       type=int,   default=150,  help="MOG2 frame history length")
+    p.add_argument("--mog-var-thresh",    type=int,   default=25,   help="MOG2 variance threshold")
+    # Auto-horizon EMA
+    p.add_argument("--auto-ground-alpha", type=float, default=0.25, help="EMA smoothing speed for auto ground exclusion (0=frozen, 1=instant)")
+    # YOLO night confidence offset
+    p.add_argument("--night-conf-offset", type=float, default=0.10, help="Confidence offset subtracted from --conf in night mode")
+    # Camera motion detector
+    p.add_argument("--cam-motion-thresh", type=float, default=0.03, help="Phase-correlation response threshold for camera motion detection")
+    # IR flame confidence gate (Barrier #4 fix)
+    p.add_argument("--flame-min-conf",   type=float, default=0.35, help="Min confidence for IR flame/dim-dot detection to be accepted (lower = more sensitive)")
+    p.add_argument("--device",           type=str, default="", help="Device to run on (e.g., '0' for GPU, 'cpu' for CPU)")
     return p.parse_args()
 
 if __name__ == "__main__":
-    args   = parse_args()
-    run(source=args.video 
-        if args.video 
-            else args.cam, 
-                weights =   args.weights, 
-                conf    =   args.conf,
-                show_window = not args.no_window, 
-                force_night = args.night, 
-                force_day   = args.day,
-                night_sensitivity = args.night_sensitivity, 
-                save_output = args.save, 
-                bright_thresh = args.bright_thresh, 
-                min_flame_area = args.min_flame_area, 
-                max_flame_area = args.max_flame_area, 
-                edge_margin = args.edge_margin,
-                max_aspect_ratio = args.max_aspect_ratio, 
-                ground_fraction = args.ground_fraction, 
-                static_grid     = args.static_grid,
-                static_world_thresh = args.static_world_thresh, 
-                static_cam_thresh = args.static_cam_thresh,
-                static_decay = args.static_decay, 
-                trail_length = args.trail_length, 
-                track_max_dist = args.track_max_dist,
-                track_confirm    = args.track_confirm, 
-                track_missed    = args.track_missed, 
-                default_filter  = args.default_filter)
+    args = parse_args()
+    run(source           = args.video if args.video else args.cam,
+        weights          = args.weights,
+        conf             = args.conf,
+        show_window      = not args.no_window,
+        force_night      = args.night,
+        force_day        = args.day,
+        night_sensitivity= args.night_sensitivity,
+        save_output      = args.save,
+        bright_thresh    = args.bright_thresh,
+        min_flame_area   = args.min_flame_area,
+        max_flame_area   = args.max_flame_area,
+        edge_margin      = args.edge_margin,
+        max_aspect_ratio = args.max_aspect_ratio,
+        ground_fraction  = args.ground_fraction,
+        static_grid      = args.static_grid,
+        static_world_thresh = args.static_world_thresh,
+        static_cam_thresh= args.static_cam_thresh,
+        static_decay     = args.static_decay,
+        trail_length     = args.trail_length,
+        track_max_dist   = args.track_max_dist,
+        track_confirm    = args.track_confirm,
+        track_missed     = args.track_missed,
+        default_filter   = args.default_filter,
+        cluster_radius   = args.cluster_radius,
+        cluster_max_size = args.cluster_max_size,
+        mog_history      = args.mog_history,
+        mog_var_thresh   = args.mog_var_thresh,
+        auto_ground_alpha= args.auto_ground_alpha,
+        night_conf_offset= args.night_conf_offset,
+        cam_motion_thresh= args.cam_motion_thresh,
+        flame_min_conf   = args.flame_min_conf,
+        device           = args.device,
+    )
                 
 
