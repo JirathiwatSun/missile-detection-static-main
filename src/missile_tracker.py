@@ -22,6 +22,7 @@ import math
 import collections
 import numpy as np
 from scipy.optimize import linear_sum_assignment
+from scipy.spatial import KDTree
 import threading
 import json
 if os.name == 'nt':
@@ -134,64 +135,71 @@ class NightFlameDetector:
         num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(flow_mask, connectivity=8)
 
         raw_detections = []
+        # Optimization: also pull the raw brightness mask for intensity weighting
         for i in range(1, num_labels):
             area = stats[i, cv2.CC_STAT_AREA]
             if area < self.min_area or area > self.max_area:
                 continue
 
-            bx = stats[i, cv2.CC_STAT_LEFT]
-            by = stats[i, cv2.CC_STAT_TOP]
-            bw = stats[i, cv2.CC_STAT_WIDTH]
-            bh = stats[i, cv2.CC_STAT_HEIGHT]
+            bx, by, bw, bh = stats[i, cv2.CC_STAT_LEFT], stats[i, cv2.CC_STAT_TOP], stats[i, cv2.CC_STAT_WIDTH], stats[i, cv2.CC_STAT_HEIGHT]
             cx, cy = centroids[i][0], centroids[i][1]
 
-            ground_y = int(h_fr * current_ground_frac)
-            # Blobs fully outside the edge margins are always rejected.
-            # Blobs BELOW the ground exclusion line are tagged rather than hard-rejected,
-            # so the main loop can apply a stricter confidence gate instead of
-            # discarding them completely (allows low-trajectory / near-ground missiles).
             if cx < mg or cx > w_fr - mg or cy < mg:
                 continue
-            below_ground = (cy > ground_y)
 
-            if bh > 0 and bw > 0:
-                aspect = max(bw, bh) / min(bw, bh)
-                if aspect > self.max_aspect_ratio:
-                    continue
-                extent = area / (bw * bh)
-                if extent < 0.25:
-                    continue
+            # 1. Circularity check: prioritize symmetric point sources (missiles)
+            # Rejects elongated "light-streaks" or large rectangular building window reflections.
+            aspect = max(bw, bh) / (min(bw, bh) + 1e-6)
+            if aspect > self.max_aspect_ratio:
+                continue
+            
+            extent = area / (bw * bh + 1e-6)
+            if extent < 0.35: # Stricter extent gate for cleaner IR
+                continue
 
+            # 2. Intensity Saliency: measure peak brightness normalized to current scene
+            # (Provides better SNR than area-based confidence alone)
+            roi = bright_mask[by:by+bh, bx:bx+bw]
+            peak_val = np.max(roi) if roi.size > 0 else 0
+            
             raw_detections.append({
                 "cx": cx, "cy": cy,
                 "box": (bx, by, bw, bh),
                 "area": area,
-                "below_ground": below_ground,
+                "intensity": peak_val,
+                "below_ground": (cy > (h_fr * current_ground_frac)),
             })
 
-        filtered_detections = []
-        for d in raw_detections:
-            close_count = 0
-            tight_count = 0
-            tight_r = self.cluster_radius / 3.0
-            for other in raw_detections:
-                dist = math.hypot(d["cx"] - other["cx"], d["cy"] - other["cy"])
-                if dist < self.cluster_radius:
-                    close_count += 1
-                if dist < tight_r:
-                    tight_count += 1
+        if not raw_detections:
+            return []
 
-            is_city_light = (close_count > self.max_cluster_size) and (tight_count > 2)
+        # 3. Vectorized Cluster Rejection (KDTree)
+        # Replaces O(N^2) loop with O(N log N) for high-speed city-light filtering.
+        coords = np.array([[d["cx"], d["cy"]] for d in raw_detections])
+        tree = KDTree(coords)
+        
+        filtered_detections = []
+        for i, d in enumerate(raw_detections):
+            # Query neighbors within cluster radius
+            close_indices = tree.query_ball_point([d["cx"], d["cy"]], self.cluster_radius)
+            tight_indices = tree.query_ball_point([d["cx"], d["cy"]], self.cluster_radius / 3.0)
+            
+            # City lights usually appear as high-density grid clusters/strings.
+            is_city_light = (len(close_indices) > self.max_cluster_size) and (len(tight_indices) > 2)
+            
             if not is_city_light:
                 pad = 6
                 bx, by, bw, bh = d["box"]
                 bx, by = max(0, bx - pad), max(0, by - pad)
                 bw, bh = bw + pad * 2, bh + pad * 2
 
-                # Below-ground blobs get a reduced base confidence so the stricter
-                # gate in the main loop has meaningful signal to filter on.
+                # 4. Intensity-Weighted Confidence
+                # A very bright point source (intensity=255) is heavily prioritized.
                 base_conf = 0.25 if d["below_ground"] else 0.40
-                confidence = min(0.99, base_conf + (d["area"] / self.max_area) * 0.10)
+                int_bonus = (d["intensity"] / 255.0) * 0.15
+                area_bonus = (d["area"] / self.max_area) * 0.10
+                confidence = min(0.99, base_conf + int_bonus + area_bonus)
+                
                 filtered_detections.append({
                     "label": "Missile",
                     "confidence": confidence,
@@ -263,28 +271,8 @@ class StaticLightFilter:
         self._c_abs.clear()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# AI Enhancement & Night-Vision Pipeline
+# Night-Vision Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
-
-def enhance_proxy_for_ai(frame):
-    # 1. Bilateral filtering (Preserves edges, removes haze/noise)
-    denoised = cv2.bilateralFilter(frame, 5, 60, 60)
-    
-    # 2. Subtle Laplacian Sharpening
-    kernel = np.array([[ 0, -0.5,  0],
-                       [-0.5,  3.0, -0.5],
-                       [ 0, -0.5,  0]])
-    sharpened = cv2.filter2D(denoised, -1, kernel)
-    
-    # 3. Dynamic Range Optimization (CLAHE)
-    lab = cv2.cvtColor(sharpened, cv2.COLOR_BGR2LAB)
-    l, a, b = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
-    l_eq = clahe.apply(l)
-    return cv2.cvtColor(cv2.merge((l_eq, a, b)), cv2.COLOR_LAB2BGR)
-
-
-
 
 _VIGNETTE_CACHE = {}
 
@@ -696,7 +684,7 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
     return frame
 
 def draw_hud(frame, active_hits: list, fps: float, paused: bool,
-             night_mode: bool, display_filter: str,
+             night_mode: bool, sensor_state: str, display_filter: str,
              frame_idx: int, brightness: float, threat_level: str, 
              ui_scale: float, ground_frac: float, is_auto_ground: bool):
     
@@ -790,7 +778,10 @@ def draw_hud(frame, active_hits: list, fps: float, paused: bool,
     # Priority text gets font_th_bold
     cv2.putText(frame, "TACTICAL ENGAGEMENT SYSTEM", (20, y1), cv2.FONT_HERSHEY_SIMPLEX, f1, hud_c, font_th_bold, cv2.LINE_AA)
     cv2.putText(frame, "IRON DOME MK-III | AIRSPACE SURVEILLANCE", (15, y2), cv2.FONT_HERSHEY_SIMPLEX, f2, dim_c, font_th, cv2.LINE_AA)
-    mode_text = "NIGHT SCAN" if night_mode else "DAY OPTICS"
+    if sensor_state == "auto":
+        mode_text = "AUTO (NIGHT)" if night_mode else "AUTO (DAY)"
+    else:
+        mode_text = "FORCE NIGHT" if sensor_state == "force_night" else "FORCE DAY"
     cv2.putText(frame, f"SENSOR MODE: {mode_text}", (15, y3), cv2.FONT_HERSHEY_SIMPLEX, f3, hud_c, font_th, cv2.LINE_AA)
     cv2.putText(frame, f"RADAR: OMNI-DIRECTIONAL // HIGH RES", (15, y4), cv2.FONT_HERSHEY_SIMPLEX, f3, hud_c, font_th, cv2.LINE_AA)
 
@@ -1012,8 +1003,16 @@ def run(source, weights: str, conf: float, show_window: bool,
     )
 
     frame_idx, fps = 0, 0.0
-    paused, night_mode, manual_night_override = False, force_night, None
+    paused = False
+    if force_night:
+        sensor_state = "force_night"
+    elif force_day:
+        sensor_state = "force_day"
+    else:
+        sensor_state = "auto"
+    night_mode = force_night
     display_filter = default_filter
+    filter_manual_override = False
     prev_time = time.perf_counter()
     prev_gray_small = None
     cam_x, cam_y = 0.0, 0.0
@@ -1044,19 +1043,25 @@ def run(source, weights: str, conf: float, show_window: bool,
             if key == ord("p"):
                 paused = not paused
                 if os.name == 'nt': winsound.Beep(1400 if paused else 1600, 80) # Pause/Resume
+            manual_toggle_triggered = False
             if key == ord("n"):
-                night_mode = not night_mode
-                if os.name == 'nt': winsound.Beep(1000, 100) # Tactical Mode Toggle
-                manual_night_override = night_mode
-                flame_detector.reset()
-                static_filter.reset()
-                if not night_mode and display_filter == "nvg":
-                    display_filter = "original"
+                if sensor_state == "auto":
+                    sensor_state = "force_night"
+                    if os.name == 'nt': winsound.Beep(1000, 100)
+                elif sensor_state == "force_night":
+                    sensor_state = "force_day"
+                    if os.name == 'nt': winsound.Beep(1200, 100)
+                else:
+                    sensor_state = "auto"
+                    if os.name == 'nt': winsound.Beep(1400, 100)
+                manual_toggle_triggered = True
+                
             if key == ord("f"):
                 if os.name == 'nt': winsound.Beep(2000, 50) # Optics Filter Switch
                 filters = ["thermal", "nvg", "original"] if night_mode else ["thermal", "original"]
                 idx = (filters.index(display_filter) + 1) % len(filters) if display_filter in filters else 0
                 display_filter = filters[idx]
+                filter_manual_override = True
                 
             if key == ord("w"): 
                 current_ground_frac = max(0.1, current_ground_frac - 0.05)
@@ -1091,8 +1096,31 @@ def run(source, weights: str, conf: float, show_window: bool,
             small_frame = cv2.resize(frame, (proc_w, proc_h))
     
             brightness = get_scene_brightness(small_frame)
-            if manual_night_override is not None: night_mode = manual_night_override
-            elif not force_night and not force_day: night_mode = brightness < night_sensitivity
+            was_night = night_mode
+            
+            if sensor_state == "force_night":
+                night_mode = True
+            elif sensor_state == "force_day":
+                night_mode = False
+            else:
+                night_mode = brightness < night_sensitivity
+
+            if manual_toggle_triggered:
+                flame_detector.reset()
+                static_filter.reset()
+                if not night_mode:
+                    display_filter = "original"
+                else:
+                    display_filter = default_filter
+                filter_manual_override = False
+            elif frame_idx == 0:
+                if not night_mode and not filter_manual_override:
+                    display_filter = "original"
+            else:
+                if was_night and not night_mode and not filter_manual_override:
+                    display_filter = "original"
+                elif not was_night and night_mode and not filter_manual_override:
+                    display_filter = default_filter
 
             # ── Flash / explosion detection ───────────────────────────────────
             if rolling_brightness is None:
@@ -1174,7 +1202,7 @@ def run(source, weights: str, conf: float, show_window: bool,
             if night_mode: 
                 small_enhanced = apply_night_vision(small_frame)
             else: 
-                small_enhanced = enhance_proxy_for_ai(small_frame)
+                small_enhanced = small_frame
     
             night_conf = max(0.20, conf - night_conf_offset) if night_mode else conf
             
@@ -1317,7 +1345,7 @@ def run(source, weights: str, conf: float, show_window: bool,
             sys.stdout.flush()
     
             if show_window:
-                annotated = draw_hud(display, active_hits, fps, paused, night_mode, display_filter, frame_idx, brightness, threat, ui_sc, current_ground_frac, is_auto_ground)
+                annotated = draw_hud(display, active_hits, fps, paused, night_mode, sensor_state, display_filter, frame_idx, brightness, threat, ui_sc, current_ground_frac, is_auto_ground)
                 cv2.imshow("Iron Dome Missile Tracker v3", cv2.resize(annotated, (1280, 720)) if w_orig > 1920 else annotated)
             else:
                 annotated = display

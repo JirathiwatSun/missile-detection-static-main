@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableDelayedExpansion
+setlocal DisableDelayedExpansion
 
 REM ── Python resolver ────────────────────────────────────────────────────────
 set PYTHON=python

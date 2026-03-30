@@ -52,7 +52,7 @@ While the tracker is running, you can use these keys to interact with the system
 | :--- | :--- | :--- |
 | **Q** | **ABORT** | Safely shut down the tracking system. |
 | **P** | **HALT** | Pause the video feed to analyze a specific frame. |
-| **N** | **OPTICS** | Manually toggle between Day (AI) and Night (Flame) modes. |
+| **N** | **OPTICS** | Cycle through tactical states: **AUTO** -> **FORCE NIGHT** -> **FORCE DAY**. |
 | **F** | **FILTER** | Cycle through **Thermal (FLIR)** and **NVG** visual filters. |
 | **G** | **AUTO-G** | Toggle automatic horizon detection on/off. |
 | **W** | **HORIZON ↑** | Raise the ground exclusion horizon line (ignore more city lights). |
