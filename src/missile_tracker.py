@@ -69,9 +69,10 @@ NIGHT_COLOUR_OTHER   = (200, 200, 200)
 NIGHT_COLOUR_HUD     = (255, 255, 255)   
 NIGHT_TRAIL_COLOUR   = (150, 150, 150)   
 
-THREAT_CLEAR   = (0, 220, 60)
-THREAT_CAUTION = (0, 180, 255)
-THREAT_ALERT   = (0, 0, 255)
+THREAT_CLEAR    = (0, 220, 60)    # Green
+THREAT_CAUTION  = (0, 180, 255)   # Amber-yellow
+THREAT_CRITICAL = (0, 100, 255)   # Deep orange
+THREAT_ALERT    = (0, 0, 255)     # Red
 
 # Pre-computed gamma LUT for night-vision shadow recovery (gamma = 0.55)
 # Built once at import time so apply_night_vision() never recomputes it per frame.
@@ -109,17 +110,20 @@ class NightFlameDetector:
         
         self.bg_subtractor      = cv2.createBackgroundSubtractorMOG2(history=self.mog_history, varThreshold=self.mog_var_thresh, detectShadows=False)
 
-    def detect(self, small_frame, current_ground_frac, proxy_bright_mask=None) -> list[dict]:
+    def detect(self, small_frame, current_ground_frac, proxy_bright_mask=None,
+                mog_learning_rate: float = -1) -> list[dict]:
         h_fr, w_fr = small_frame.shape[:2]
         mg = int(self.edge_margin_frac * min(h_fr, w_fr))
-        
+
         if proxy_bright_mask is not None:
             bright_mask = proxy_bright_mask
         else:
             small_gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
             _, bright_mask = cv2.threshold(small_gray, self.bright_thresh, 255, cv2.THRESH_BINARY)
 
-        motion_mask = self.bg_subtractor.apply(small_frame)
+        # mog_learning_rate=-1 lets MOG2 auto-select; 0.0 freezes the model
+        # (used during/after explosion flashes to prevent background poisoning)
+        motion_mask = self.bg_subtractor.apply(small_frame, learningRate=mog_learning_rate)
         _, motion_mask = cv2.threshold(motion_mask, 127, 255, cv2.THRESH_BINARY)
 
         flow_mask = cv2.bitwise_and(bright_mask, motion_mask)
@@ -142,40 +146,58 @@ class NightFlameDetector:
             cx, cy = centroids[i][0], centroids[i][1]
 
             ground_y = int(h_fr * current_ground_frac)
-            if cx < mg or cx > w_fr - mg or cy < mg or cy > ground_y:
+            # Blobs fully outside the edge margins are always rejected.
+            # Blobs BELOW the ground exclusion line are tagged rather than hard-rejected,
+            # so the main loop can apply a stricter confidence gate instead of
+            # discarding them completely (allows low-trajectory / near-ground missiles).
+            if cx < mg or cx > w_fr - mg or cy < mg:
                 continue
+            below_ground = (cy > ground_y)
 
             if bh > 0 and bw > 0:
                 aspect = max(bw, bh) / min(bw, bh)
                 if aspect > self.max_aspect_ratio:
                     continue
                 extent = area / (bw * bh)
-                if extent < 0.25: 
+                if extent < 0.25:
                     continue
 
             raw_detections.append({
                 "cx": cx, "cy": cy,
                 "box": (bx, by, bw, bh),
-                "area": area
+                "area": area,
+                "below_ground": below_ground,
             })
 
         filtered_detections = []
         for d in raw_detections:
-            neighbors = sum(1 for other in raw_detections 
-                            if math.hypot(d["cx"] - other["cx"], d["cy"] - other["cy"]) < self.cluster_radius)
-            
-            if neighbors <= self.max_cluster_size:
+            close_count = 0
+            tight_count = 0
+            tight_r = self.cluster_radius / 3.0
+            for other in raw_detections:
+                dist = math.hypot(d["cx"] - other["cx"], d["cy"] - other["cy"])
+                if dist < self.cluster_radius:
+                    close_count += 1
+                if dist < tight_r:
+                    tight_count += 1
+
+            is_city_light = (close_count > self.max_cluster_size) and (tight_count > 2)
+            if not is_city_light:
                 pad = 6
                 bx, by, bw, bh = d["box"]
                 bx, by = max(0, bx - pad), max(0, by - pad)
                 bw, bh = bw + pad * 2, bh + pad * 2
-                
-                confidence = min(0.99, 0.40 + (d["area"] / self.max_area) * 0.10)
+
+                # Below-ground blobs get a reduced base confidence so the stricter
+                # gate in the main loop has meaningful signal to filter on.
+                base_conf = 0.25 if d["below_ground"] else 0.40
+                confidence = min(0.99, base_conf + (d["area"] / self.max_area) * 0.10)
                 filtered_detections.append({
                     "label": "Missile",
                     "confidence": confidence,
                     "box": (bx, by, bw, bh),
                     "source": "flame",
+                    "below_ground": d["below_ground"],
                 })
 
         return filtered_detections
@@ -322,18 +344,31 @@ def apply_nvg_display(frame):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class MissileTrail:
-    def __init__(self, maxlen=TRAIL_LENGTH, confirm_frames=3, max_dist=80, max_missed=12):
+    def __init__(self, maxlen=TRAIL_LENGTH, confirm_frames=3, max_dist=80, max_missed=12,
+                 max_coast=6, vel_gate_mult=1.5, dir_penalty_mult=0.4,
+                 vel_alpha=0.5, coast_drift=0.3, box_smooth_alpha=0.4,
+                 trail_jump_mult=2.5):
         self._trails: dict[int, collections.deque] = {}
         self._missed: dict[int, int] = {}
         self._hits: dict[int, int] = {}
         self._last_hit: dict[int, dict] = {}
         self._box_history: dict[int, collections.deque] = {}
-        self._velocities: dict[int, tuple[float, float]] = {}  
+        self._velocities: dict[int, tuple[float, float]] = {}
+        self._smooth_box: dict[int, list] = {}   # EMA-smoothed box for jitter-free display
         self._maxlen  = maxlen
-        self._next_id = 1 
+        self._next_id = 1
         self._confirm_frames = confirm_frames
         self._max_dist = max_dist
         self._max_missed = max_missed
+        self._max_coast       = max_coast        # frames to dead-reckon before hiding the box
+        self._vel_gate_mult   = vel_gate_mult    # speed multiplier for assignment gate
+        self._dir_penalty_mult = dir_penalty_mult # direction-penalty strength
+        self._vel_alpha       = vel_alpha        # EMA weight for velocity update (new vs old)
+        self._coast_drift     = coast_drift      # fraction of velocity applied during coast
+        self._box_smooth_alpha = box_smooth_alpha # EMA alpha for displayed box smoothing
+        # Max gap between consecutive trail points before the segment is skipped.
+        # Prevents 'wire' lines when two nearby sources briefly swap IDs.
+        self._trail_jump_limit = self._max_dist * trail_jump_mult
 
     def update(self, hits: list[dict]) -> list[dict]:
         tids = list(self._trails.keys())
@@ -343,32 +378,46 @@ class MissileTrail:
         matched_tids = set()
 
         if num_targets > 0 and num_hits > 0:
-            cost_matrix = np.zeros((num_targets, num_hits))
+            cost_matrix = np.full((num_targets, num_hits), 1e9)
             for i, tid in enumerate(tids):
                 lx, ly, _ = self._trails[tid][-1]
                 dx, dy = self._velocities.get(tid, (0.0, 0.0))
                 px, py = lx + dx, ly + dy
+                speed = math.hypot(dx, dy)
+                gate = max(self._max_dist, speed * self._vel_gate_mult)
                 for j, hit in enumerate(hits):
                     bx, by, bw, bh = hit["box"]
                     cx, cy = bx + bw // 2, by + bh // 2
-                    cost_matrix[i, j] = math.hypot(cx - px, cy - py)
+                    raw_dist = math.hypot(cx - px, cy - py)
+                    if speed > 2.0:
+                        jx, jy = cx - lx, cy - ly
+                        dot = (jx * dx + jy * dy) / (speed * (math.hypot(jx, jy) + 1e-6))
+                        direction_penalty = max(0.0, -dot) * speed * self._dir_penalty_mult
+                    else:
+                        direction_penalty = 0.0
+                    cost_matrix[i, j] = raw_dist + direction_penalty
 
             t_indices, h_indices = linear_sum_assignment(cost_matrix)
             for t_idx, h_idx in zip(t_indices, h_indices):
+                tid = tids[t_idx]
                 dist = cost_matrix[t_idx, h_idx]
-                if dist < self._max_dist:
-                    tid, hit = tids[t_idx], hits[h_idx]
+                dx, dy = self._velocities.get(tid, (0.0, 0.0))
+                speed = math.hypot(dx, dy)
+                gate = max(self._max_dist, speed * self._vel_gate_mult)
+                if dist < gate:
+                    hit = hits[h_idx]
                     matched_hits.add(h_idx)
                     matched_tids.add(tid)
                     bx, by, bw, bh = hit["box"]
                     cx, cy = bx + bw // 2, by + bh // 2
                     lx, ly, _ = self._trails[tid][-1]
-                    # Calculate velocity for smoothing/prediction
                     new_dx, new_dy = cx - lx, cy - ly
                     prev_dx, prev_dy = self._velocities.get(tid, (new_dx, new_dy))
-                    self._velocities[tid] = (0.7*new_dx + 0.3*prev_dx, 0.7*new_dy + 0.3*prev_dy)
-                    
-                    # Store center and source size (avg of dw, dh)
+                    self._velocities[tid] = (
+                        self._vel_alpha * new_dx + (1.0 - self._vel_alpha) * prev_dx,
+                        self._vel_alpha * new_dy + (1.0 - self._vel_alpha) * prev_dy,
+                    )
+
                     src_size = (bw + bh) / 2.0
                     self._trails[tid].append((cx, cy, src_size))
                     self._box_history[tid].append(hit["box"])
@@ -376,6 +425,17 @@ class MissileTrail:
                     self._hits[tid] += 1
                     self._last_hit[tid] = hit
                     hit["tid"] = tid
+
+                    # EMA smooth the displayed box (alpha=0.4 → responsive but stable)
+                    raw_box = list(hit["box"])
+                    if tid in self._smooth_box:
+                        sb = self._smooth_box[tid]
+                        a = self._box_smooth_alpha
+                        self._smooth_box[tid] = [
+                            int(a * raw_box[k] + (1.0 - a) * sb[k]) for k in range(4)
+                        ]
+                    else:
+                        self._smooth_box[tid] = raw_box[:]
 
         for j, hit in enumerate(hits):
             if j not in matched_hits:
@@ -391,6 +451,7 @@ class MissileTrail:
                 self._box_history[tid] = collections.deque(maxlen=5)
                 self._box_history[tid].append(hit["box"])
                 self._velocities[tid] = (0.0, 0.0)
+                self._smooth_box[tid] = list(hit["box"])
                 self._last_hit[tid] = hit
                 hit["tid"] = tid
                 matched_tids.add(tid)
@@ -398,22 +459,42 @@ class MissileTrail:
         active_tracked = []
         for tid in list(self._trails.keys()):
             if tid in matched_tids:
+                # Confirmed, live detection — use EMA-smoothed box
                 if self._hits[tid] >= self._confirm_frames:
-                    hist = self._box_history[tid]
-                    current_box = hist[-1]
                     hit = self._last_hit[tid].copy()
-                    hit["box"] = tuple(int(round(x)) for x in current_box)
+                    sb = self._smooth_box.get(tid, list(self._box_history[tid][-1]))
+                    hit["box"] = tuple(sb)
                     hit["dx"], hit["dy"] = self._velocities.get(tid, (0.0, 0.0))
+                    hit["coasting"] = False
                     active_tracked.append(hit)
             else:
                 self._missed[tid] += 1
-                if self._missed[tid] > self._max_missed: 
+                if self._missed[tid] > self._max_missed:
+                    # Fully expired — purge track
                     del self._trails[tid]
                     del self._missed[tid]
                     del self._hits[tid]
                     del self._last_hit[tid]
                     del self._box_history[tid]
+                    self._smooth_box.pop(tid, None)
                     if tid in self._velocities: del self._velocities[tid]
+                elif (self._hits[tid] >= self._confirm_frames and
+                      self._missed[tid] <= self._max_coast):
+                    # COAST: dead-reckon position using last velocity so the box
+                    # stays on-screen during brief MOG2 gaps (no blinking).
+                    dx, dy = self._velocities.get(tid, (0.0, 0.0))
+                    m = self._missed[tid]
+                    sb = self._smooth_box.get(tid, list(self._box_history[tid][-1]))
+                    coast_box = (
+                        int(sb[0] + dx * m * self._coast_drift),
+                        int(sb[1] + dy * m * self._coast_drift),
+                        sb[2], sb[3]
+                    )
+                    hit = self._last_hit[tid].copy()
+                    hit["box"] = coast_box
+                    hit["dx"], hit["dy"] = dx, dy
+                    hit["coasting"] = True
+                    active_tracked.append(hit)
         return active_tracked
 
     def draw(self, frame, night_mode: bool, ui_scale: float):
@@ -427,34 +508,42 @@ class MissileTrail:
 
             pts = list(dq)
             if len(pts) < 2: continue
-            
+
             trail_len = len(pts)
             for i in range(1, trail_len):
                 x1, y1, s1 = pts[i-1]
                 x2, y2, s2 = pts[i]
-                
+
+                # ── Discontinuity guard ──────────────────────────────────────
+                # If two consecutive trail points are farther apart than the
+                # allowed jump limit, it means the track ID was briefly stolen
+                # by a nearby source. Skip this segment so no 'wire' line is
+                # drawn across the gap.
+                if math.hypot(x2 - x1, y2 - y1) > self._trail_jump_limit:
+                    continue
+                # ─────────────────────────────────────────────────────────────
+
                 # alpha: 0.0 (oldest) -> 1.0 (newest)
                 alpha = i / (trail_len - 1)
-                
+
                 # Dynamic thickness (Strictly capped to 5 for clarity)
                 thick = min(int(2 * ui_scale), int(s2 * (0.15 + 0.65 * alpha)))
                 thick = max(1, thick)
-                
+
                 # Color fading (dimming towards background/black)
                 base_c = NIGHT_TRAIL_COLOUR if night_mode else DAY_COLOUR_OTHER
-                
+
                 # Add exhaust glow for the last few segments
                 if i > trail_len - 6:
                     glow_c = (0, 165, 255) if night_mode else (0, 100, 255)
-                    # Blend base color with glow color
                     glow_weight = (i - (trail_len - 6)) / 6
                     c = tuple(int(base_c[j]*(1-glow_weight) + glow_c[j]*glow_weight) for j in range(3))
                 else:
                     c = base_c
-                
+
                 # Apply alpha fading (dimming)
                 draw_c = tuple(int(ch * (0.2 + 0.8 * alpha)) for ch in c)
-                
+
                 cv2.line(frame, (int(x1), int(y1)), (int(x2), int(y2)), draw_c, thick, cv2.LINE_AA)
 
 
@@ -464,7 +553,8 @@ class MissileTrail:
 
 def draw_detection(frame, x1, y1, x2, y2, label, confidence,
                    is_missile: bool, night_mode: bool, frame_idx: int,
-                   tid: int, ui_scale: float, dx: float = 0.0, dy: float = 0.0, source: str = "yolo"):
+                   tid: int, ui_scale: float, dx: float = 0.0, dy: float = 0.0,
+                   source: str = "yolo", in_ring: bool = False):
     
     # Establish Typography & Line Hierarchy (Thick Corners, Thin Data)
     lw_fine = 1            # Crisp thin lines for telemetry/data
@@ -481,28 +571,77 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
 
     dim_c = tuple(int(c * 0.6) for c in colour)
 
-    # 1. Fighter Jet Target Brackets (Adaptive Dynamics)
+    # 1. Bounding Box  ─────────────────────────────────────────────────────────
     bw, bh = x2 - x1, y2 - y1
-    
-    # Draw Thin Side Edges (Connecting the corners)
-    cv2.rectangle(frame, (x1, y1), (x2, y2), dim_c, lw_fine, cv2.LINE_AA)
 
-    # Differentiate minimum corner size based on detection source
-    if is_missile and source == "yolo":
-        # YOLO Missile: Larger minimum corner for daylight optics
-        cl = max(int(min(bw, bh) * 0.25), max(18, int(12 * ui_scale)))
+    if in_ring:
+        # ── IN-RING: Diamond targeting frame with bold corner L-brackets ────────
+        cx_b, cy_b = (x1 + x2) // 2, (y1 + y2) // 2
+        half = max(bw, bh) // 2 + int(8 * ui_scale)
+
+        # Diamond vertices
+        top    = (cx_b,        cy_b - half)
+        right  = (cx_b + half, cy_b)
+        bottom = (cx_b,        cy_b + half)
+        left   = (cx_b - half, cy_b)
+        pts = np.array([top, right, bottom, left], dtype=np.int32)
+
+        # 1. Pulsing semi-transparent fill
+        pulse      = abs(math.sin(frame_idx * 0.15))
+        fill_alpha = 0.06 + 0.08 * pulse
+        overlay = frame.copy()
+        cv2.fillPoly(overlay, [pts], colour)
+        cv2.addWeighted(overlay, fill_alpha, frame, 1.0 - fill_alpha, 0, frame)
+
+        # 2. Thin diamond outline (dim)
+        cv2.polylines(frame, [pts], isClosed=True, color=dim_c, thickness=lw_fine, lineType=cv2.LINE_AA)
+
+        # 3. Bold L-brackets at each of the 4 diamond corners.
+        #    Each L is two short lines running along the two adjacent diamond edges.
+        #    Edge direction along the diamond is always +/-45° so step_xy = corner_len / sqrt(2).
+        cl  = max(int(14 * ui_scale), int(half * 0.30))   # bracket arm length along the edge
+        step = int(cl / math.sqrt(2))
+        # (corner_point, dir_toward_edge1, dir_toward_edge2)  — each dir is (dx, dy)
+        corners = [
+            (top,    (+1, +1), (-1, +1)),   # Top    → toward Right and Left
+            (right,  (-1, -1), (-1, +1)),   # Right  → toward Top  and Bottom
+            (bottom, (+1, -1), (-1, -1)),   # Bottom → toward Right and Left
+            (left,   (+1, -1), (+1, +1)),   # Left   → toward Top  and Bottom
+        ]
+        for (cpx, cpy), (d1x, d1y), (d2x, d2y) in corners:
+            cv2.line(frame, (cpx, cpy),
+                     (int(cpx + d1x * step), int(cpy + d1y * step)),
+                     colour, lw_bold, cv2.LINE_AA)
+            cv2.line(frame, (cpx, cpy),
+                     (int(cpx + d2x * step), int(cpy + d2y * step)),
+                     colour, lw_bold, cv2.LINE_AA)
+
+        # 4. Outer precision ring + inner dot
+        cv2.circle(frame, (cx_b, cy_b), half + int(5 * ui_scale), dim_c,  lw_fine, cv2.LINE_AA)
+        cv2.circle(frame, (cx_b, cy_b), int(3 * ui_scale),        colour, -1,      cv2.LINE_AA)
     else:
-        # IR/Flame: Smaller, more precise minimum corner for exhaust tracking
-        cl = max(int(min(bw, bh) * 0.25), max(8, int(6 * ui_scale)))
+        # ── STANDARD: Fighter-jet corner bracket box ───────────────────────────
+        # Thin side edges
+        cv2.rectangle(frame, (x1, y1), (x2, y2), dim_c, lw_fine, cv2.LINE_AA)
 
-    for sx, sy, dir_x, dir_y in [(x1,y1,1,1),(x2,y1,-1,1),(x1,y2,1,-1),(x2,y2,-1,-1)]:
-        cv2.line(frame, (sx, sy), (sx + dir_x*cl, sy), colour, lw_bold, cv2.LINE_AA)
-        cv2.line(frame, (sx, sy), (sx, sy + dir_y*cl), colour, lw_bold, cv2.LINE_AA)
+        # Differentiate minimum corner size based on detection source
+        if is_missile and source == "yolo":
+            corner_len = max(int(16 * ui_scale), int(min(bw, bh) * 0.35))
+        elif source == "flame":
+            corner_len = max(int(10 * ui_scale), int(min(bw, bh) * 0.25))
+        else:
+            corner_len = max(int(8 * ui_scale), int(min(bw, bh) * 0.20))
+
+        # Corner brackets
+        for px, py, sx, sy in [(x1, y1, 1, 1), (x2, y1, -1, 1), (x1, y2, 1, -1), (x2, y2, -1, -1)]:
+            cv2.line(frame, (px, py), (px + sx * corner_len, py), colour, lw_bold, cv2.LINE_AA)
+            cv2.line(frame, (px, py), (px, py + sy * corner_len), colour, lw_bold, cv2.LINE_AA)
 
     cx_m, cy_m = (x1 + x2) // 2, (y1 + y2) // 2
-    
-    # 2. Center Targeting Dot (Increased for visibility)
-    cv2.circle(frame, (cx_m, cy_m), int(3 * ui_scale), colour, -1, cv2.LINE_AA)
+
+    # Center targeting dot
+    if not in_ring:
+        cv2.circle(frame, (cx_m, cy_m), int(3 * ui_scale), colour, -1, cv2.LINE_AA)
 
     # 3. Predictive Lead Indicator
     if abs(dx) > 0.5 or abs(dy) > 0.5:
@@ -513,8 +652,8 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
         cv2.line(frame, (cx_m, cy_m), (lead_x, lead_y), dim_c, lw_fine, cv2.LINE_AA)
         cv2.drawMarker(frame, (lead_x, lead_y), colour, cv2.MARKER_DIAMOND, int(10*ui_scale), lw_fine, cv2.LINE_AA)
 
-    # 4. Lock-on Reticle (Double-Circle Design)
-    if is_missile or source == "flame":
+    # 3. Lock-on Reticle (Double-Circle Design)  ──────────────────────────────
+    if not in_ring and (is_missile or source == "flame"):
         radius = max(int(35*ui_scale), int(math.hypot(x2-x1, y2-y1) * 0.60))
         # Primary Outer Circle
         cv2.circle(frame, (cx_m, cy_m), radius, dim_c, lw_fine, cv2.LINE_AA)
@@ -527,8 +666,8 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
         cv2.line(frame, (cx_m - radius, cy_m), (cx_m - radius + tl, cy_m), colour, lw_fine, cv2.LINE_AA)
         cv2.line(frame, (cx_m + radius, cy_m), (cx_m + radius - tl, cy_m), colour, lw_fine, cv2.LINE_AA)
 
-    # 5. Military Telemetry Block
-    tgt_id = f"TARGET-{tid:03d}"
+    # 4. Military Telemetry Block  ─────────────────────────────────────────────
+    tgt_id = f"TGT-{tid:03d} [LOCKED]" if in_ring else f"TARGET-{tid:03d}"
     w_box = x2 - x1
     rng_km = max(0.5, 2000.0 / (w_box + 1e-5))           
     alt_m  = max(100.0, (frame.shape[0] - y2) * 18.5)    
@@ -673,9 +812,14 @@ def draw_hud(frame, active_hits: list, fps: float, paused: bool,
     cv2.addWeighted(overlay2, 0.5, frame, 0.5, 0, frame)
     cv2.line(frame, (0, h-b_height), (w, h-b_height), dim_c, lw_fine)
 
-    if threat_level == "CLEAR": tc = THREAT_CLEAR
-    elif threat_level == "CAUTION": tc = THREAT_CAUTION if (frame_idx // 15) % 2 == 0 else (0, 100, 180)
-    else: tc = THREAT_ALERT if (frame_idx // 8) % 2 == 0 else (0, 0, 150)
+    if threat_level == "CLEAR":
+        tc = THREAT_CLEAR
+    elif threat_level == "CAUTION":
+        tc = THREAT_CAUTION if (frame_idx // 15) % 2 == 0 else (0, 120, 180)
+    elif threat_level == "CRITICAL":
+        tc = THREAT_CRITICAL if (frame_idx // 10) % 2 == 0 else (0, 60, 180)
+    else:  # THREAT DETECTED
+        tc = THREAT_ALERT if (frame_idx // 8) % 2 == 0 else (0, 0, 150)
 
     # Increased box size and text scale for critical alerts
     threat_f = 0.55 * ui_scale
@@ -790,7 +934,12 @@ def run(source, weights: str, conf: float, show_window: bool,
         cluster_radius: int, cluster_max_size: int,
         mog_history: int, mog_var_thresh: int,
         auto_ground_alpha: float, night_conf_offset: float,
-        cam_motion_thresh: float, flame_min_conf: float, device: str) -> None:
+        cam_motion_thresh: float, flame_min_conf: float, device: str,
+        track_coast: int, track_vel_gate: float, track_dir_penalty: float,
+        track_vel_alpha: float, track_coast_drift: float, track_box_smooth: float,
+        trail_jump_mult: float,
+        flash_thresh: float, flash_cooldown_frames: int, max_horizon_rise: float,
+        below_ground_conf: float, yolo_below_ground_conf: float) -> None:
 
     try: from ultralytics import YOLO
     except ImportError: sys.exit("[ERROR] ultralytics not installed.")
@@ -853,15 +1002,34 @@ def run(source, weights: str, conf: float, show_window: bool,
         out_path = os.path.join(BASE_DIR, "output_tracked.mp4")
         writer   = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*"mp4v"), fps_src, (native_w, native_h))
 
-    trail_yolo  = MissileTrail(maxlen=trail_length, confirm_frames=track_confirm, max_dist=track_max_dist, max_missed=track_missed) 
+    trail_yolo = MissileTrail(
+        maxlen=trail_length, confirm_frames=track_confirm,
+        max_dist=track_max_dist, max_missed=track_missed,
+        max_coast=track_coast, vel_gate_mult=track_vel_gate,
+        dir_penalty_mult=track_dir_penalty, vel_alpha=track_vel_alpha,
+        coast_drift=track_coast_drift, box_smooth_alpha=track_box_smooth,
+        trail_jump_mult=trail_jump_mult,
+    )
 
     frame_idx, fps = 0, 0.0
     paused, night_mode, manual_night_override = False, force_night, None
-    display_filter = default_filter 
+    display_filter = default_filter
     prev_time = time.perf_counter()
     prev_gray_small = None
     cam_x, cam_y = 0.0, 0.0
     announced_tids = set()
+
+    # ── Explosion / flash immunity state ─────────────────────────────────────
+    # rolling_brightness tracks the slow-moving "normal" scene brightness.
+    # When a frame is much brighter than normal (explosion flash), we:
+    #  (a) freeze the auto-horizon so it can't snap upward to the flash,
+    #  (b) stop the MOG2 background subtractor from learning the bright frame,
+    #  (c) hold a cooldown after the flash so ground lights can't flood as hits.
+    rolling_brightness   = None          # slow EMA of scene brightness
+    brightness_ema_alpha = 0.05          # very slow tracker of "normal" brightness
+    flash_active         = False
+    flash_cooldown_ctr   = 0
+    # ─────────────────────────────────────────────────────────────────────────
 
     if not (isinstance(source, int) or str(source).isdigit()):
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -925,6 +1093,29 @@ def run(source, weights: str, conf: float, show_window: bool,
             brightness = get_scene_brightness(small_frame)
             if manual_night_override is not None: night_mode = manual_night_override
             elif not force_night and not force_day: night_mode = brightness < night_sensitivity
+
+            # ── Flash / explosion detection ───────────────────────────────────
+            if rolling_brightness is None:
+                rolling_brightness = brightness
+            else:
+                # Only update the rolling average when NOT flashing so the
+                # reference level never gets permanently elevated by explosions.
+                if not flash_active:
+                    rolling_brightness = (brightness_ema_alpha * brightness
+                                          + (1.0 - brightness_ema_alpha) * rolling_brightness)
+
+            flash_ratio = brightness / (rolling_brightness + 1.0)
+            if flash_ratio >= flash_thresh:
+                if not flash_active:
+                    flash_active = True
+                flash_cooldown_ctr = flash_cooldown_frames   # reset cooldown on every flash frame
+            else:
+                flash_active = False
+                if flash_cooldown_ctr > 0:
+                    flash_cooldown_ctr -= 1
+
+            suppressing_mog = flash_active or (flash_cooldown_ctr > 0)
+            # ─────────────────────────────────────────────────────────────────
     
             if night_mode:
                 native_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -954,10 +1145,26 @@ def run(source, weights: str, conf: float, show_window: bool,
             fps = 1.0 / (now - prev_time) if (now - prev_time) > 0 else 0.0
             prev_time = now
 
-            if is_auto_ground:
+            if not night_mode:
+                # Day mode: ground exclusion is disabled entirely.
+                # YOLO AI vision does not need a horizon line — it detects missile
+                # shapes at any position. Force ground_frac to 1.0 so the comparison
+                # cy >= ground_y_orig is never true (line sits at the very bottom).
+                current_ground_frac = 1.0
+            elif is_auto_ground:
                 raw_frac = compute_auto_horizon(small_frame)
-                # Single EMA pass here — NOT inside compute_auto_horizon
-                auto_ground_ema = AUTO_GROUND_ALPHA * raw_frac + (1.0 - AUTO_GROUND_ALPHA) * auto_ground_ema
+
+                if flash_active:
+                    # Explosion in the sky: freeze the horizon exactly where it is.
+                    pass
+                else:
+                    # Normal EMA update — asymmetrically rate-limited so the line
+                    # cannot spike upward faster than max_horizon_rise per frame.
+                    candidate = AUTO_GROUND_ALPHA * raw_frac + (1.0 - AUTO_GROUND_ALPHA) * auto_ground_ema
+                    if candidate < auto_ground_ema:
+                        candidate = max(candidate, auto_ground_ema - max_horizon_rise)
+                    auto_ground_ema = candidate
+
                 # Hard cap: exclusion zone can never exceed bottom 60 % of frame
                 current_ground_frac = max(0.40, min(0.95, auto_ground_ema))
 
@@ -979,10 +1186,15 @@ def run(source, weights: str, conf: float, show_window: bool,
     
             flame_detections = []
             if night_mode:
-                # The user explicitly requested forcing the AI Enhancement illusion 
-                # strictly into the Physics detector! We disable the native mask so 
-                # the physics engine natively reads the YOLO proxy for its math.
-                flame_detections = flame_detector.detect(small_enhanced, current_ground_frac, proxy_bright_mask=None)
+                # During or just after a flash, suppress MOG2 learning so the
+                # background model isn't poisoned by the explosion-lit frame.
+                # This prevents ground lights from appearing as 'new motion' once
+                # the flash fades.
+                mog_lr = 0.0 if suppressing_mog else -1
+                flame_detections = flame_detector.detect(
+                    small_enhanced, current_ground_frac,
+                    proxy_bright_mask=None, mog_learning_rate=mog_lr
+                )
                 flame_detections = static_filter.filter(flame_detections, cam_x, cam_y)
     
             if display_filter == "thermal": 
@@ -1006,23 +1218,34 @@ def run(source, weights: str, conf: float, show_window: bool,
                     oy1 = int(round(y1 * scale_y))
                     ox2 = int(round(x2 * scale_x))
                     oy2 = int(round(y2 * scale_y))
-                    # Centre-of-box ground exclusion: skip detections whose
-                    # centre sits below (or at) the horizon line
+                    det_conf = float(box.conf[0])
+                    # Two-zone confidence gate for YOLO (mirrors IR pipeline):
+                    #   Above ground line → normal conf threshold (already pre-filtered by YOLO)
+                    #   Below ground line → stricter yolo_below_ground_conf gate so
+                    #     cars, buildings, and low-confidence shape hits near the ground
+                    #     don't flood the tracker, while a genuine high-confidence
+                    #     missile shape on the ground still gets through.
                     cy_box = (oy1 + oy2) // 2
                     if cy_box >= ground_y_orig:
-                        continue
+                        if det_conf < yolo_below_ground_conf:
+                            continue
                     hits.append({
                         "box": (ox1, oy1, ox2 - ox1, oy2 - oy1),
                         "label": label,
-                        "confidence": float(box.conf[0]),
+                        "confidence": det_conf,
                         "source": "yolo"
                     })
     
             for d in flame_detections:
-                if d["confidence"] >= flame_min_conf:
-                    bx, by, bw, bh = d["box"]
-                    d["box"] = (int(round(bx*scale_x)), int(round(by*scale_y)), 
-                                int(round(bw*scale_x)), int(round(bh*scale_y)))
+                bx, by, bw, bh = d["box"]
+                d["box"] = (int(round(bx*scale_x)), int(round(by*scale_y)),
+                            int(round(bw*scale_x)), int(round(bh*scale_y)))
+                # Apply the appropriate confidence gate:
+                #   - Above ground exclusion line → normal flame_min_conf
+                #   - Below ground exclusion line → stricter below_ground_conf
+                #     (high-confidence IR only, e.g. very bright/large near-ground missile)
+                min_conf = below_ground_conf if d.get("below_ground") else flame_min_conf
+                if d["confidence"] >= min_conf:
                     hits.append(d)
     
             final_hits = []
@@ -1072,16 +1295,23 @@ def run(source, weights: str, conf: float, show_window: bool,
     
             for hit in active_hits:
                 bx, by, bw, bh = hit["box"]
-                # is_missile=True for YOLO missile-class hits and flame (IR) hits.
-                # Any future non-missile YOLO class that slips through gets False.
+                # Determine if this target is inside the central HUD targeting ring
+                h_fr, w_fr = display.shape[:2]
+                ring_r = int(220 * ui_sc)
+                cx_fr, cy_fr = w_fr // 2, h_fr // 2
+                hit_cx = bx + bw // 2
+                hit_cy = by + bh // 2
+                target_in_ring = math.hypot(hit_cx - cx_fr, hit_cy - cy_fr) <= ring_r
+
                 is_missile_hit = is_missile_class(hit.get("label", "")) or hit.get("source") == "flame"
                 draw_detection(display, bx, by, bx+bw, by+bh, hit["label"], hit["confidence"],
-                               is_missile_hit, night_mode, frame_idx, hit["tid"], ui_sc, 
-                               dx=hit.get("dx", 0.0), dy=hit.get("dy", 0.0), source=hit["source"])
+                               is_missile_hit, night_mode, frame_idx, hit["tid"], ui_sc,
+                               dx=hit.get("dx", 0.0), dy=hit.get("dy", 0.0),
+                               source=hit["source"], in_ring=target_in_ring)
     
             trail_yolo.draw(display, night_mode, ui_sc)
     
-            threat = "CLEAR" if missile_count == 0 else "CAUTION" if missile_count <= 2 else "THREAT DETECTED"
+            threat = "CLEAR" if missile_count == 0 else "CAUTION" if missile_count <= 3 else "CRITICAL" if missile_count <= 7 else "THREAT DETECTED"
     
             sys.stdout.write(f"\r[FPS: {fps:>5.1f}] | Target Hits: {missile_count}")
             sys.stdout.flush()
@@ -1152,9 +1382,25 @@ def parse_args():
     p.add_argument("--night-conf-offset", type=float, default=0.10, help="Confidence offset subtracted from --conf in night mode")
     # Camera motion detector
     p.add_argument("--cam-motion-thresh", type=float, default=0.03, help="Phase-correlation response threshold for camera motion detection")
-    # IR flame confidence gate (Barrier #4 fix)
-    p.add_argument("--flame-min-conf",   type=float, default=0.35, help="Min confidence for IR flame/dim-dot detection to be accepted (lower = more sensitive)")
-    p.add_argument("--device",           type=str, default="", help="Device to run on (e.g., '0' for GPU, 'cpu' for CPU)")
+    # IR flame confidence gate
+    p.add_argument("--flame-min-conf",      type=float, default=0.35,  help="Min confidence for IR flame/dim-dot detection to be accepted")
+    p.add_argument("--device",              type=str,   default="",    help="Device to run on (e.g., '0' for GPU, 'cpu' for CPU)")
+    # --- Multi-target IR tracker stability ---
+    p.add_argument("--track-coast",         type=int,   default=6,     help="Frames to dead-reckon (coast) a missed IR track before hiding its box (anti-blink)")
+    p.add_argument("--track-vel-gate",      type=float, default=1.5,   help="Speed multiplier for Hungarian assignment gate (lower = tighter matching)")
+    p.add_argument("--track-dir-penalty",   type=float, default=0.4,   help="Direction-reversal penalty strength (0=off, higher=stricter direction lock)")
+    p.add_argument("--track-vel-alpha",     type=float, default=0.5,   help="Velocity EMA weight for new measurement (0=ignore new, 1=instant update)")
+    p.add_argument("--track-coast-drift",   type=float, default=0.3,   help="Fraction of velocity applied per missed frame during coast (0=stay put, 1=full drift)")
+    p.add_argument("--track-box-smooth",    type=float, default=0.4,   help="EMA alpha for displayed bounding-box smoothing (0=frozen, 1=raw/jittery)")
+    p.add_argument("--trail-jump-mult",     type=float, default=2.5,   help="Trail discontinuity threshold as a multiple of track-max-dist (lower = stricter, prevents wire trails)")
+    # --- Explosion / flash immunity ---
+    p.add_argument("--flash-thresh",         type=float, default=1.6,   help="Brightness ratio (current / rolling avg) above which a frame is classified as an explosion flash")
+    p.add_argument("--flash-cooldown",       type=int,   default=30,    help="Frames to suppress MOG2 learning after a flash ends (prevents ground-light false positives)")
+    p.add_argument("--max-horizon-rise",     type=float, default=0.015, help="Max fractional change per frame the horizon can move UPWARD (prevents flash from spiking the exclusion line)")
+    # --- Below-ground IR detection ---
+    p.add_argument("--below-ground-conf",      type=float, default=0.75, help="Min IR confidence for detections BELOW the ground exclusion line (higher = stricter; 1.0 = disabled)")
+    # --- Below-ground YOLO detection ---
+    p.add_argument("--yolo-below-ground-conf", type=float, default=0.70, help="Min YOLO confidence for detections BELOW the ground exclusion line (higher = stricter; 1.0 = disabled)")
     return p.parse_args()
 
 if __name__ == "__main__":
@@ -1191,6 +1437,17 @@ if __name__ == "__main__":
         cam_motion_thresh= args.cam_motion_thresh,
         flame_min_conf   = args.flame_min_conf,
         device           = args.device,
+        track_coast      = args.track_coast,
+        track_vel_gate   = args.track_vel_gate,
+        track_dir_penalty= args.track_dir_penalty,
+        track_vel_alpha  = args.track_vel_alpha,
+        track_coast_drift= args.track_coast_drift,
+        track_box_smooth = args.track_box_smooth,
+        trail_jump_mult  = args.trail_jump_mult,
+        flash_thresh         = args.flash_thresh,
+        flash_cooldown_frames= args.flash_cooldown,
+        max_horizon_rise     = args.max_horizon_rise,
+        below_ground_conf        = args.below_ground_conf,
+        yolo_below_ground_conf   = args.yolo_below_ground_conf,
     )
                 
-
