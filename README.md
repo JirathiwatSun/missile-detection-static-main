@@ -9,7 +9,9 @@ Welcome to the **Iron Dome Missile Tracker v3**! This project is a professional-
 If you have just downloaded the project from GitHub, follow these 3 simple steps to get started:
 
 ### 1. Automatic Environment Setup
-Double-click the **`setup.bat`** file.
+- **Windows:** Double-click the **`setup.bat`** file.
+- **macOS/Linux:** Run `chmod +x setup.sh && ./setup.sh` in your terminal.
+
 > [!IMPORTANT]
 > This will automatically create your virtual environment (`.venv`) and install all necessary AI libraries (OpenCV, Torch, Ultralytics, etc.). You don't need to run any manual `pip` commands!
 
@@ -22,9 +24,8 @@ If you want to train your own model or explore the 9,206-image dataset:
 
 ### 3. Run the Tracker
 To see the system in action immediately using the included high-accuracy weights:
-```powershell
-.\run.bat track --video data\videos\Iron_Dome.mp4
-```
+- **Windows:** `.\run.bat track --video data\videos\Iron_Dome.mp4`
+- **macOS/Linux:** `./run.sh track --video data/videos/Iron_Dome.mp4`
 
 ---
 
@@ -34,9 +35,8 @@ The system is designed to handle both clear daylight and pitch-black night condi
 
 ### Running with different Video Feeds:
 *   **Auto Mode (Recommended):** Tracks using the best available data.
-    ```bash
-    .\run.bat track --video data\videos\Iron_Dome.mp4
-    ```
+    - **Windows:** `.\run.bat track --video data\videos\Iron_Dome.mp4`
+    - **macOS/Linux:** `./run.sh track --video data/videos/Iron_Dome.mp4`
 *   **Tactical Night Mode:** Forces the high-sensitivity "NightFlame" engine.
     ```bash
     .\run.bat track --video data\videos\Iron_Dome.mp4 --night --bright-thresh 150
@@ -67,9 +67,8 @@ If you want to customize the AI to detect specific types of projectiles, follows
 
 1.  **Prepare your data:** Ensure you have run the download script mentioned in Step 2 of the Installation section.
 2.  **Start Training:**
-    ```bash
-    .\run.bat train
-    ```
+    - **Windows:** `.\run.bat train`
+    - **macOS/Linux:** `./run.sh train`
 3.  **Monitor Results:** The training logic will run for **100 epochs**. You can follow the progress in the newly created `runs/detect/missile_yolo26_custom/` folder.
 4.  **Deploy:** Once finished, your best model will be saved as `best.pt`. You can move this to the `models/` folder to use it.
 
