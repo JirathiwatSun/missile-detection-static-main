@@ -44,10 +44,16 @@ echo.
 
 if "%~1"=="track" goto :track
 if "%~1"=="train" goto :train
+if "%~1"=="download-data" goto :download_data
 goto :usage
 
 :track
 echo [ACTION] Starting Iron Dome Missile Tracker v3...
+REM Check if --download-data was passed as a flag within 'track'
+for %%x in (%*) do (
+    if "%%x"=="--download-data" goto :download_data
+)
+
 for /f "tokens=1,* delims= " %%a in ("%*") do set REMAINING=%%b
 %PYTHON% src\missile_tracker.py ^
     --weights             %WEIGHTS% ^
@@ -133,6 +139,10 @@ echo.
 echo  Training:
 echo    run.bat train
 echo.
+echo  Data Management:
+echo    run.bat download-data                 (download Roboflow dataset)
+echo    run.bat track --download-data         (alternative download command)
+echo.
 echo  Live window controls:
 echo    Q  Quit              P  Pause/Resume        N  Toggle Night/Day
 echo    F  Cycle Filter      G  Toggle Auto-Horizon  W/S  Raise/Lower Horizon
@@ -147,3 +157,8 @@ REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\missile.p
 REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\yolo26n_custom.pt
 REM .\run.bat track --video data\videos\NIGHT@.mp4
 REM .\run.bat track --video data\videos\IRAN!1.mp4
+
+:download_data
+echo [ACTION] Downloading tactical missile dataset...
+%PYTHON% scripts\download_data.py
+goto :EOF

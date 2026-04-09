@@ -56,6 +56,16 @@ echo
 case "$1" in
     track)
         echo "[ACTION] Starting Iron Dome Missile Tracker v3..."
+        
+        # Check if --download-data is present in arguments
+        for arg in "$@"; do
+            if [ "$arg" == "--download-data" ]; then
+                echo "[ACTION] Redircting to data download..."
+                $PYTHON scripts/download_data.py
+                exit 0
+            fi
+        done
+
         shift # Remove 'track' from arguments
         
         # Run python script with all configured flags
@@ -105,6 +115,10 @@ case "$1" in
         echo "[ACTION] Starting YOLO26 Training on Custom Dataset..."
         $PYTHON scripts/train_yolo26.py
         ;;
+    download-data)
+        echo "[ACTION] Downloading tactical missile dataset..."
+        $PYTHON scripts/download_data.py
+        ;;
     *)
         echo
         echo " Usage:"
@@ -138,6 +152,10 @@ case "$1" in
         echo
         echo " Training:"
         echo "   ./run.sh train"
+        echo
+        echo " Data Management:"
+        echo "   ./run.sh download-data                 (download Roboflow dataset)"
+        echo "   ./run.sh track --download-data         (alternative download command)"
         echo
         echo " Live window controls:"
         echo "   Q  Quit              P  Pause/Resume        N  Toggle Night/Day"
