@@ -190,6 +190,7 @@ missile-detection-static-main/
 ### 📌 **Level 1: Getting Started (Start Here!)**
 | Document | Purpose | Time |
 |----------|---------|------|
+| [docs/00_MASTER_DOCUMENTATION_INDEX.md](./docs/00_MASTER_DOCUMENTATION_INDEX.md) | Navigation hub & rubric coverage | 5 min | All level 2 docs |
 | [docs/01_START_HERE_QUICK_5MIN.md](./docs/01_START_HERE_QUICK_5MIN.md) | Installation & first run | 5 min |
 | [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) | Copy-paste test commands | 5 min |
 
@@ -209,7 +210,7 @@ missile-detection-static-main/
 | Document | Purpose | Time | Prerequisites |
 |----------|---------|------|---|
 | [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) | Complete testing guide & procedures | 30 min | Quickstart guide |
-| [docs/00_MASTER_DOCUMENTATION_INDEX.md](./docs/00_MASTER_DOCUMENTATION_INDEX.md) | Navigation hub & rubric coverage | 5 min | All level 2 docs |
+
 
 ### 🎬 **Level 5: Presentation & Reference**
 | Document | Purpose | Time | Prerequisites |
