@@ -119,7 +119,7 @@ frame_idx = 0
 
 while True:
     # ═══════════════════════════════════════════════════════════════
-    # 1. ACQUIRE FRAME BUFFER (from pool, ~0.1µs instead of 200-500µs)
+    # 1. ACQUIRE FRAME BUFFER (from pool, ~0.1us instead of 200-500us)
     # ═══════════════════════════════════════════════════════════════
     
     frame_buffer_lock.lock()
@@ -221,7 +221,7 @@ frame_pool.cleanup()
 
 | Aspect | Traditional | With OS Components |
 |--------|------------|-------------------|
-| **Frame Buffer** | `np.zeros()` every time (200-500µs) | `pool.acquire()` (0.1µs) |
+| **Frame Buffer** | `np.zeros()` every time (200-500us) | `pool.acquire()` (0.1us) |
 | **Buffer Cleanup** | `del buffer` later triggers GC | `pool.release()` instant reuse |
 | **Detection** | Runs on main thread, blocks display | Runs on worker thread via scheduler |
 | **Tracking** | Waits for detection to finish | Starts as soon as detection ready |
@@ -315,7 +315,7 @@ def ir_flame_detector_thread(scheduler, tracker_lock, frame_queue):
 
 After integration, verify improvements:
 
-- [ ] **Memory allocation**: Should be ~0µs (not 200-500µs)
+- [ ] **Memory allocation**: Should be ~0us (not 200-500us)
 - [ ] **GC pauses**: Should be 0ms (not 2-15ms)
 - [ ] **FPS consistency**: Should maintain 60fps (not drop to 30-40fps)
 - [ ] **Disk writes don't block**: Logging in background doesn't stutter video

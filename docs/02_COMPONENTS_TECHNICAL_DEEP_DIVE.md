@@ -61,7 +61,7 @@ finally:
 - ✅ Exclusive resource access (frame buffer, detector state)
 - ✅ Critical sections where only one thread should run
 
-**Cost:** ~2-3µs to acquire/release
+**Cost:** ~2-3us to acquire/release
 
 ---
 
@@ -124,10 +124,10 @@ finally:
 
 | Operation | Time | Notes |
 |-----------|------|-------|
-| Read acquire (no contention) | <1µs | ✅ Fast |
-| Read acquire (many readers) | <1µs | ✅ Concurrent! |
-| Write acquire | 2-3µs | ⚠️ Waits for readers |
-| Write acquire (exclusive) | 2-3µs | ✅ No contention on reads |
+| Read acquire (no contention) | <1us | ✅ Fast |
+| Read acquire (many readers) | <1us | ✅ Concurrent! |
+| Write acquire | 2-3us | ⚠️ Waits for readers |
+| Write acquire (exclusive) | 2-3us | ✅ No contention on reads |
 
 **Example: 50 readers**
 - Without lock: 🔴 Race conditions, crashes
@@ -193,7 +193,7 @@ def tracker():
 while True:
     frame = cap.read()
     
-    # PROBLEM: malloc takes 200-500µs
+    # PROBLEM: malloc takes 200-500us
     buffer = np.zeros((640, 480, 3))  # 1.2MB allocation
     process(buffer)
     del buffer  # Later triggers garbage collection
@@ -222,7 +222,7 @@ frame_pool = FrameBufferPool(
 while True:
     frame = cap.read()
     
-    # FAST: Get buffer from pool (0.1µs vs 200-500µs!)
+    # FAST: Get buffer from pool (0.1us vs 200-500us!)
     buffer = frame_pool.acquire()
     
     # Use buffer
@@ -233,7 +233,7 @@ while True:
     frame_pool.release(buffer)
     
     # NO garbage collection delays!
-    # → Consistent 60fps! ✓
+    # → Consistent 60fps! [OK]
 ```
 
 ---
@@ -244,19 +244,19 @@ while True:
 
 ```
 Traditional malloc:
-├─ Frame 1:    350µs malloc + process + 5ms GC pause (lucky)
-├─ Frame 2:    280µs malloc + process + 0µs (GC happened earlier)
-├─ Frame 3:    420µs malloc + process + 0µs
-├─ Frame 500:  300µs malloc + process + 15ms GC pause (unlucky!)
+├─ Frame 1:    350us malloc + process + 5ms GC pause (lucky)
+├─ Frame 2:    280us malloc + process + 0us (GC happened earlier)
+├─ Frame 3:    420us malloc + process + 0us
+├─ Frame 500:  300us malloc + process + 15ms GC pause (unlucky!)
 ├─ ...
 └─ Result: 🔴 Frame drops at random intervals (40% loss!)
 
 With pool:
 ├─ Startup:  100ms total (allocate 8 buffers)
-├─ Frame 1:  0.1µs acquire + process + 0.1µs release
-├─ Frame 2:  0.1µs acquire + process + 0.1µs release
-├─ Frame 3:  0.1µs acquire + process + 0.1µs release
-├─ Frame 500: 0.1µs acquire + process + 0.1µs release
+├─ Frame 1:  0.1us acquire + process + 0.1us release
+├─ Frame 2:  0.1us acquire + process + 0.1us release
+├─ Frame 3:  0.1us acquire + process + 0.1us release
+├─ Frame 500: 0.1us acquire + process + 0.1us release
 ├─ ...
 └─ Result: 🟢 Consistent 60fps! Zero jitter!
 ```
@@ -276,7 +276,7 @@ STARTUP:
 RUNTIME - acquire():
 ┌──────────────────────────────────┐
 │ if available_buffers:            │
-│   buf = available_buffers.pop()  │ <- Takes 0.1µs
+│   buf = available_buffers.pop()  │ <- Takes 0.1us
 │   in_use_buffers[buf.id] = buf   │
 │   return buf                     │
 │ else:                            │
@@ -289,7 +289,7 @@ detections = yolo(buf)
 
 RUNTIME - release():
 ┌─────────────────────────────────┐
-│ in_use_buffers.pop(buf.id)      │ <- Takes 0.1µs
+│ in_use_buffers.pop(buf.id)      │ <- Takes 0.1us
 │ available_buffers.append(buf)   │
 │ # Buffer ready for reuse!       │
 └─────────────────────────────────┘
@@ -507,7 +507,7 @@ while True:
     frame = cap.read()
     detections = yolo(frame)
     
-    # BUFFERED: Fast write (10µs), runs asynchronously
+    # BUFFERED: Fast write (10us), runs asynchronously
     log_entry = json.dumps({
         "frame": frame_idx,
         "detections": len(detections)
@@ -537,7 +537,7 @@ while True:
 #### **Buffered I/O (Fast)**
 ```
 write() call
-  └─> Data copied to kernel buffer (10µs)
+  └─> Data copied to kernel buffer (10us)
   └─> Returns immediately
   └─> Kernel writes to disk later (batched, efficient)
   └─> If system crashes: data might be lost
@@ -559,7 +559,7 @@ Use: Alternative optimization path
 #### **fsync (Safe)**
 ```
 write() call (buffered)
-  └─> Data copied to kernel buffer (10µs)
+  └─> Data copied to kernel buffer (10us)
   └─> Returns immediately
   
 fsync() call
@@ -583,14 +583,14 @@ CPU work: 14ms (YOLO + Kalman)
 I/O budget: 2.67ms (can fit ~250-300 buffered writes)
 
 Strategy:
-├─ Regular logs: Buffered (10µs each)
+├─ Regular logs: Buffered (10us each)
 │  └─ Can write 250+ logs per frame
 │
 ├─ Critical alerts: fsync every 10th frame
 │  └─ 1 fsync per 167ms = 4-5m overhead
 │  └─ Fits easily in budget!
 
-Result: 60fps maintained ✓
+Result: 60fps maintained [OK]
 ```
 
 ---

@@ -1,12 +1,5 @@
 # OS Implementation - Presentation & Q&A Guide
 
-## For Grading Rubric: "Final project presentation (clarity, demonstration, Q&A)" - 30%
-
-This guide prepares you to clearly present the OS implementation and answer technical questions.
-
----
-
-## Presentation Structure (15-20 minutes)
 
 ### 1. Introduction (2 minutes)
 
@@ -117,7 +110,7 @@ for frame in video:
     del buf                          # free
     
 Problems:
-- malloc/free latency: 5-10µs per frame
+- malloc/free latency: 5-10us per frame
 - Memory fragmentation: 25% after 1000 frames
 - Garbage collection pauses: 50-100ms
 
@@ -125,12 +118,12 @@ Problems:
 pool = FrameBufferPool(num_buffers=10)
 
 for frame in video:
-    buf = pool.acquire()   # Already allocated: 1µs
+    buf = pool.acquire()   # Already allocated: 1us
     detect(buf)
-    pool.release(buf)      # Returns to pool: 1µs
+    pool.release(buf)      # Returns to pool: 1us
     
 Benefits:
-- 84% faster allocation (1µs vs 8µs)
+- 84% faster allocation (1us vs 8us)
 - 0% fragmentation (never deallocated)
 - No garbage collection pauses
 ```
@@ -141,8 +134,8 @@ Benefits:
 ```
 Allocation Time vs Frame Count
   
-  Without pool:  ████████ 5µs + GC pauses
-  With pool:     █ 1µs (5x better)
+  Without pool:  ████████ 5us + GC pauses
+  With pool:     █ 1us (5x better)
 
 Fragmentation Ratio:
   Without pool:  ████████ 25% (bad)
@@ -179,8 +172,8 @@ A: "Good question. Trade-off analysis:
 # PRIORITY SCHEDULING (what we use)
 
 Real-time detection (HIGH priority) ────┐
-Logging (NORMAL priority)              │─→ CPU
-UI updates (BACKGROUND priority)       │
+Logging (NORMAL priority)               │─→ CPU
+UI updates (BACKGROUND priority)        │
 
 Result:
 - Detection runs ASAP
@@ -208,7 +201,7 @@ FIFO              Poor              Good        5%
 Priority          Excellent         Poor        8%
 Round-Robin       Good              Excellent   12%
 
-✓ We chose PRIORITY for real-time responsiveness
+[OK] We chose PRIORITY for real-time responsiveness
 ```
 
 #### Key Question & Answer
@@ -236,14 +229,14 @@ A: "Good observation. In production, we would add aging:
 fm.write(fd, detection_data, fsync=False)
 # Data in OS cache (RAM)
 # If crash: data lost
-# Speed: 10µs
+# Speed: 10us
 # Use for: Temporary logs
 
 # DIRECT I/O (Slow, safe)
 fm.write(fd, critical_alert, fsync=True)
 # Force data to disk
 # If crash: data preserved
-# Speed: 10,000µs (1000x slower!)
+# Speed: 10,000us (1000x slower!)
 # Use for: Critical alerts
 ```
 
@@ -380,8 +373,8 @@ A: "Trade-off analysis:
 ```
 A: "fsync is 1000x slower than buffered:
    
-   Buffered:  10µs per write
-   Fsync:     10000µs per write
+   Buffered:  10us per write
+   Fsync:     10000us per write
    
    If 1000 writes/sec with fsync: 10 seconds latency
    With buffered+selective fsync: 100ms latency
@@ -425,7 +418,7 @@ A: "Multiple approaches:
    - Statistics consistent
 
 2. Performance testing: Measure against benchmarks
-   - Allocation: 5µs (vs 8µs baseline)
+   - Allocation: 5us (vs 8us baseline)
    - Lock contention: <1% for readers
    - fsync: Measurable overhead but acceptable
 
@@ -496,23 +489,28 @@ A: "Not fully, due to:
 
 ```bash
 python -c "
-from src.os_synchronization import RWLock
+import sys
+sys.path.insert(0, 'src')
+from os_synchronization import RWLock
 import time
 
 rwlock = RWLock('demo', track_stats=True)
 
 # Multiple readers
+print('Starting 100 concurrent readers...')
 for i in range(100):
     rwlock.acquire_read()
+    rwlock.release_read()  # Release so writer can acquire
     
-# Show no contention
-print(f'Read stats: {rwlock.stats[\"reads\"].contentions} contentions')
+read_stats = rwlock.stats['reads']
+print(f'[OK] Read stats: {read_stats.contentions} contentions')
 
-# Now writer
+# Now writer (exclusive)
+print('Acquiring exclusive write lock...')
 start = time.time()
 rwlock.acquire_write()
 write_time = (time.time() - start) * 1000
-print(f'Write wait time: {write_time:.2f}ms')
+print(f'[OK] Write wait time: {write_time:.2f}ms')
 rwlock.release_write()
 "
 ```
@@ -521,13 +519,16 @@ rwlock.release_write()
 
 ```bash
 python -c "
-from src.os_memory import FrameBufferPool
+import sys
+sys.path.insert(0, 'src')
+from os_memory import FrameBufferPool
 import time
 
 pool = FrameBufferPool(buffer_size=1920*1080*3*4, num_buffers=5, 
                        height=1080, width=1920, channels=3)
 
 # Measure acquire time
+print('Benchmarking Frame Buffer Pool (100 cycles)...')
 times = []
 for _ in range(100):
     start = time.perf_counter()
@@ -535,8 +536,8 @@ for _ in range(100):
     times.append((time.perf_counter() - start) * 1_000_000)
     pool.release(buf)
 
-print(f'Avg acquire time: {sum(times)/len(times):.2f}µs')
-print(f'Pool stats: {pool.get_stats()}')
+print(f'[OK] Avg acquire time: {sum(times)/len(times):.2f}us')
+print(f'[OK] Pool stats: {pool.get_stats()}')
 "
 ```
 
@@ -546,90 +547,5 @@ print(f'Pool stats: {pool.get_stats()}')
 python demo_os_features.py
 ```
 
-This shows everything working together.
-
 ---
 
-## Presentation Tips
-
-### 1. **Use Visual Aids**
-   - Timeline diagrams for scheduling
-   - Memory layout diagrams
-   - Performance graphs (with data!)
-
-### 2. **Emphasize Correctness**
-   - Show test results
-   - Highlight no race conditions/deadlocks
-   - Reference system call standards
-
-### 3. **Quantify Benefits**
-   - Specific numbers: "84% faster", "5x improvement"
-   - Comparative analysis (with vs without)
-   - Overhead measurements
-
-### 4. **Connect to Real-World**
-   - "This is how Linux kernel works"
-   - "Production systems use similar patterns"
-   - "Banks depend on fsync for consistency"
-
-### 5. **Be Ready for Questions**
-   - Have code ready to show
-   - Know exact measurements
-   - Understand trade-offs deeply
-
----
-
-## Common Mistakes to Avoid
-
-❌ **Don't**: "We implemented OS features"
-✓ **Do**: "We demonstrate specific OS concepts: priorities, memory pooling, file durability"
-
-❌ **Don't**: Make vague claims about performance
-✓ **Do**: "Allocation improved from 8µs to 1µs (5x), measured with 1M samples"
-
-❌ **Don't**: Ignore failure cases
-✓ **Do**: "Thread crashes are handled by scheduler restarting tasks"
-
-❌ **Don't**: Use jargon without explaining
-✓ **Do**: "RWLock allows multiple readers, but only one writer. Benefits: reduced contention"
-
----
-
-## Scoring Tips for 30% Presentation Grade
-
-**Excellent (4/4):**
-- Clear, well-structured explanation
-- Live demo runs smoothly
-- Answer Q&A with confidence and accuracy
-- Specific technical details (not hand-waving)
-
-**Good (3/4):**
-- Clear explanation with minor gaps
-- Demo works with small glitches
-- Answer most Q&A questions correctly
-
-**Satisfactory (2/4):**
-- Understandable but lacks polish
-- Demo has noticeable problems
-- Q&A answers partially correct
-
-**Poor (1/4):**
-- Hard to follow
-- Demo fails
-- Cannot explain core concepts
-
----
-
-## Final Checklist
-
-Before presenting:
-- [ ] Test all demos locally
-- [ ] Have backup video recording (just in case)
-- [ ] Print main statistics/charts
-- [ ] Memorize key numbers (latency improvements, percentages)
-- [ ] Practice timing (15-20 minutes)
-- [ ] Prepare 5-10 expected Q&A answers
-- [ ] Have code visible for live inspection
-- [ ] Know exact file paths and commands
-
-Good luck! You've implemented substantial OS concepts. Confidence + clarity = excellent score.

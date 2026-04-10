@@ -68,7 +68,7 @@ def demo_synchronization():
     stats = mutex.stats
     print(f"  Acquisitions: {stats.acquisitions}")
     print(f"  Contentions: {stats.contentions}")
-    print(f"  Avg wait: {stats.avg_wait_time_us():.2f}µs")
+    print(f"  Avg wait: {stats.avg_wait_time_us():.2f}us")
     
     # Semaphore Demo
     print("\n2. SEMAPHORE (Counting Semaphore)")
@@ -104,7 +104,7 @@ def demo_synchronization():
     
     print("\nAcquiring write lock (exclusive)...")
     write_time = rwlock.acquire_write()
-    print(f"  Write wait time: {write_time:.2f}µs")
+    print(f"  Write wait time: {write_time:.2f}us")
     rwlock.release_write()
     print("  [OK] Write lock was exclusive")
     
@@ -288,7 +288,7 @@ def demo_file_management():
     buffered_time = (time.perf_counter() - start) * 1_000_000
     
     print(f"  Wrote {len(detection_log)} bytes")
-    print(f"  Time: {buffered_time:.2f}µs (buffered, no fsync)")
+    print(f"  Time: {buffered_time:.2f}us (buffered, no fsync)")
     
     fm.close(fd_buffered)
     
@@ -309,7 +309,7 @@ def demo_file_management():
     direct_time = (time.perf_counter() - start) * 1_000_000
     
     print(f"  Wrote {len(critical_data)} bytes")
-    print(f"  Time: {direct_time:.2f}µs (direct + fsync)")
+    print(f"  Time: {direct_time:.2f}us (direct + fsync)")
     print(f"  Slowdown: {direct_time/buffered_time:.1f}x")
     print(f"  [OK] But data is guaranteed on disk")
     
@@ -324,7 +324,7 @@ def demo_file_management():
     print(f"  Total files closed: {stats['total_closes']}")
     print(f"  Total bytes written: {stats['total_bytes_written_mb']:.2f}MB")
     print(f"  Total fsyncs: {stats['total_fsyncs']}")
-    print(f"  Avg fsync time: {stats['avg_fsync_time_us']:.2f}µs")
+    print(f"  Avg fsync time: {stats['avg_fsync_time_us']:.2f}us")
     
     # Performance trade-off
     print("\n4. PERFORMANCE TRADE-OFFS")
@@ -332,7 +332,7 @@ def demo_file_management():
     
     print(f"  Buffered I/O overhead: ~5%")
     print(f"  Direct I/O overhead: ~15%")
-    print(f"  fsync per operation: ~{stats['avg_fsync_time_us']:.0f}µs")
+    print(f"  fsync per operation: ~{stats['avg_fsync_time_us']:.0f}us")
     print(f"\n  Decision: Use buffered I/O for logs, fsync for critical data")
     print(f"  Recommended ratio: 100 buffered : 1 fsync")
 

@@ -161,8 +161,8 @@ print(f"Fragmentation: {stats.fragmentation_ratio:.2%}")
 
 **Performance Impact:**
 ```
-Without pool:  malloc() → ~5µs, free() → ~3µs per frame
-With pool:     acquire() → ~1µs, release() → ~1µs per frame
+Without pool:  malloc() → ~5us, free() → ~3us per frame
+With pool:     acquire() → ~1us, release() → ~1us per frame
 Improvement:   84% reduction in allocation overhead
 ```
 
@@ -232,8 +232,8 @@ print(f"Avg turnaround: {stats['avg_turnaround_time_ms']:.2f}ms")
 
 **Context Switching Overhead:**
 ```
-- Each context switch: ~10µs platform overhead
-- Total overhead = num_context_switches × 10µs
+- Each context switch: ~10us platform overhead
+- Total overhead = num_context_switches × 10us
 - Monitored in get_global_stats()['context_switch_overhead_us']
 ```
 
@@ -284,8 +284,8 @@ fm.close(fd)
 
 **Performance Impact:**
 ```
-Buffered writes:  ~10µs per write
-Fsync writes:     ~1000-10000µs (1-10ms) per write
+Buffered writes:  ~10us per write
+Fsync writes:     ~1000-10000us (1-10ms) per write
                   (depends on disk speed)
 ```
 
@@ -352,18 +352,18 @@ channel_lock.release_write()
 ```
 Test: 100,000 lock/unlock cycles
 
-Mutex:        100ms (1µs per cycle)
-Semaphore:    150ms (1.5µs per cycle) - more overhead
-RWLock Read:  50ms (.5µs per cycle)  - readers don't block
-RWLock Write: 200ms (2µs per cycle)  - writes are exclusive
-SpinLock:     20ms (.2µs per cycle)  - but high CPU usage
+Mutex:        100ms (1us per cycle)
+Semaphore:    150ms (1.5us per cycle) - more overhead
+RWLock Read:  50ms (.5us per cycle)  - readers don't block
+RWLock Write: 200ms (2us per cycle)  - writes are exclusive
+SpinLock:     20ms (.2us per cycle)  - but high CPU usage
 ```
 
 **Decision Framework:**
 - Use Mutex for general-purpose critical sections
 - Use RWLock when read contention is high (e.g., frame display + detection)
 - Use Semaphore for resource counting (e.g., thread pool)
-- Avoid SpinLock unless latency < 100µs is critical
+- Avoid SpinLock unless latency < 100us is critical
 
 ### 3.2 Memory Management Trade-offs
 
@@ -371,16 +371,16 @@ SpinLock:     20ms (.2µs per cycle)  - but high CPU usage
 
 ```
 No Preallocation:
-  - Per-frame malloc: 5µs
-  - Per-frame free: 3µs
+  - Per-frame malloc: 5us
+  - Per-frame free: 3us
   - Fragmentation after 1000 frames: 25%
-  - Total runtime: 8000µs + GC pauses
+  - Total runtime: 8000us + GC pauses
 
 With Pool Allocation:
-  - Per-frame acquire: 1µs
-  - Per-frame release: 1µs
+  - Per-frame acquire: 1us
+  - Per-frame release: 1us
   - Fragmentation: 0%
-  - Total runtime: 2000µs (74% improvement)
+  - Total runtime: 2000us (74% improvement)
   - Memory overhead: +100MB (pre-allocated)
 ```
 
@@ -396,13 +396,13 @@ With Pool Allocation:
 Scenario: Logging 100 detections
 
 Buffered (no fsync):
-  - Time: 2000µs
+  - Time: 2000us
   - Data safety: ⚠️ May be lost on crash
   - Best for: Temporary logs
 
 Direct + fsync:
-  - Time: 150,000µs (100,000µs fsync + 50,000µs write)
-  - Data safety: ✓ Durable
+  - Time: 150,000us (100,000us fsync + 50,000us write)
+  - Data safety: [OK] Durable
   - Best for: Critical alerts
 
 Recommendation:
@@ -418,19 +418,19 @@ Recommendation:
 ```
 FIFO (No Preemption):
   - Context switches: ~10 per second
-  - Switch overhead: 100µs
+  - Switch overhead: 100us
   - Response time: 100-1000ms
   - Total overhead: 1ms/sec
 
 Priority-Based:
   - Context switches: ~50 per second  
-  - Switch overhead: 500µs
+  - Switch overhead: 500us
   - Response time: 10-100ms
   - Total overhead: 5ms/sec
 
 Round-Robin (10ms quantum):
   - Context switches: ~100 per second
-  - Switch overhead: 1000µs
+  - Switch overhead: 1000us
   - Response time: 0-10ms
   - Total overhead: 10ms/sec
 ```
@@ -530,11 +530,11 @@ python demo_os_features.py
 
 This implementation demonstrates:
 
-✓ Core OS concepts (scheduling, memory, synchronization, file I/O)
-✓ Proper system call usage
-✓ Performance trade-offs with documentation
-✓ Real-world application in missile detection
-✓ Measurable improvements in latency and throughput
+[OK] Core OS concepts (scheduling, memory, synchronization, file I/O)
+[OK] Proper system call usage
+[OK] Performance trade-offs with documentation
+[OK] Real-world application in missile detection
+[OK] Measurable improvements in latency and throughput
 
 **Impact on Missile Tracker:**
 - 74% reduction in allocation latency (pool vs. malloc)

@@ -1,4 +1,4 @@
-# 🚀 Iron Dome Missile Tracker v3 - Complete System
+# (START) Iron Dome Missile Tracker v3 - Complete System
 
 **Professional-grade real-time tactical tracking system with integrated OS components**
 
@@ -61,7 +61,7 @@ chmod +x setup.sh run.sh
 ./run.sh track --download-data
 ```
 
-### 🚀 Step 3: Run (Choose One)
+### (START) Step 3: Run (Choose One)
 
 **Option A: See OS Components in Action (FASTEST - 3 min)**
 ```bash
@@ -83,7 +83,7 @@ python src/missile_tracker.py --cam 0
 
 ### ✅ Step 4: Verify Installation
 ```bash
-python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('✓ All components ready')"
+python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK] All components ready')"
 ```
 
 **✅ SETUP COMPLETE! You now have:**
@@ -182,7 +182,10 @@ missile-detection-static-main/
 
 ---
 
-## �📚 Complete Documentation Map (5-Levels)
+## �📚 ## 📚 ## 📚 ## 📚 Complete Documentation Map
+
+> [!TIP]
+> **New to the project?** Start with the **[Master Documentation Index](./docs/00_MASTER_DOCUMENTATION_INDEX.md)**. It serves as your central navigation hub for all 9 technical guides and reports.
 
 ### 📌 **Level 1: Getting Started (Start Here!)**
 | Document | Purpose | Time |
@@ -206,7 +209,7 @@ missile-detection-static-main/
 | Document | Purpose | Time | Prerequisites |
 |----------|---------|------|---|
 | [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) | Complete testing guide & procedures | 30 min | Quickstart guide |
-| [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) | Rubric coverage verification | 10 min | All level 2 docs |
+| [docs/00_MASTER_DOCUMENTATION_INDEX.md](./docs/00_MASTER_DOCUMENTATION_INDEX.md) | Navigation hub & rubric coverage | 5 min | All level 2 docs |
 
 ### 🎬 **Level 5: Presentation & Reference**
 | Document | Purpose | Time | Prerequisites |
@@ -218,10 +221,6 @@ missile-detection-static-main/
 ## 📂 Project Structure
 
 ```
-missile-detection-static-main/
-├── README.md                                    ← You are here!
-├── IMPLEMENTATION_SUMMARY.md                   ← Rubric coverage verification
-│
 ├── 📁 docs/                                    ← COMPLETE DOCUMENTATION (9 Files)
 │   ├── 00_MASTER_DOCUMENTATION_INDEX.md        ← Start here: Navigation hub
 │   ├── 01_START_HERE_QUICK_5MIN.md             ← Quick start (5 min)
@@ -293,22 +292,25 @@ missile-detection-static-main/
 ### 1. **Synchronization** (Thread Safety)
 - **What:** Mutex, Semaphore, RWLock, Condition Variable
 - **Why:** Multiple detection threads need safe access to shared data
-- **How:** [See full explanation](./docs/OS_IMPLEMENTATION.md#1-synchronization)
+- **How:** [See full explanation](./docs/03_OS_IMPLEMENTATION_DETAILS.md#1-synchronization)
+- **How:** [See full explanation](./docs/03_OS_IMPLEMENTATION_DETAILS.md#2-memory-management)
+- **How:** [See full explanation](./docs/03_OS_IMPLEMENTATION_DETAILS.md#3-task-scheduling)
+- **How:** [See full explanation](./docs/03_OS_IMPLEMENTATION_DETAILS.md#4-file-management)
 
 ### 2. **Memory Management** (Frame Pooling)
 - **What:** Pre-allocated frame buffer pool
-- **Why:** Eliminates 200-500µs malloc pauses per frame
-- **How:** [See full explanation](./docs/OS_IMPLEMENTATION.md#2-memory-management)
+- **Why:** Eliminates 200-500us malloc pauses per frame
+- **How:** [See full explanation](./docs/03_OS_IMPLEMENTATION_DETAILS.md#2-memory-management)
 
 ### 3. **Task Scheduler** (Priority Execution)
 - **What:** FIFO/Priority/Round-Robin scheduling
 - **Why:** YOLO detection never blocked by I/O or background tasks
-- **How:** [See full explanation](./docs/OS_IMPLEMENTATION.md#3-task-scheduling)
+- **How:** [See full explanation](./docs/03_OS_IMPLEMENTATION_DETAILS.md#3-task-scheduling)
 
 ### 4. **File Manager** (I/O Control)
 - **What:** Buffered vs Direct I/O, fsync control
 - **Why:** Choose between speed (logs) and safety (alerts)
-- **How:** [See full explanation](./docs/OS_IMPLEMENTATION.md#4-file-management)
+- **How:** [See full explanation](./docs/03_OS_IMPLEMENTATION_DETAILS.md#4-file-management)
 
 ---
 
@@ -318,7 +320,7 @@ missile-detection-static-main/
 |--------|-----------|----------|-------------|
 | **FPS** | 30-35 fps (variable) | 60 fps (consistent) | **2x faster** ✅ |
 | **Jitter** | 10-20ms GC pauses | <1ms (smooth) | **20x smoother** ✅ |
-| **Buffer allocation** | 200-500µs/frame | 0.1µs/frame | **5000x faster** ✅ |
+| **Buffer allocation** | 200-500us/frame | 0.1us/frame | **5000x faster** ✅ |
 | **Tracking reliability** | Frame drops at random | Zero drops ever | **Eliminated** ✅ |
 
 ---
@@ -332,14 +334,14 @@ python demo_os_features.py
 Output should show: ✅ All 4 components passing tests
 
 ### Complete Testing (30 minutes)
-Follow [MANUAL_TESTING_GUIDE.md](./MANUAL_TESTING_GUIDE.md) for:
+Follow [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) for:
 - Individual component tests
 - Integration tests
 - Performance benchmarks
 - Expected outputs for each test
 
 ### Copy-Paste Ready Commands
-See [TESTING_CHEATSHEET.md](./TESTING_CHEATSHEET.md) for:
+See [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) for:
 - Pre-written test commands
 - Expected output examples
 - Troubleshooting tips
@@ -351,10 +353,9 @@ See [TESTING_CHEATSHEET.md](./TESTING_CHEATSHEET.md) for:
 | Criterion | Points | Status | Reference |
 |-----------|--------|--------|-----------|
 | **OS Implementation** | 30% | ✅ Complete | 4 major modules in `src/` |
-| **System Calls** | 20% | ✅ Complete | 25+ documented in [OS_IMPLEMENTATION.md](./docs/OS_IMPLEMENTATION.md) |
-| **Performance Analysis** | 20% | ✅ Complete | Benchmarks in [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) |
-| **Presentation** | 30% | ✅ Complete | Guide in [docs/PRESENTATION_GUIDE.md](./docs/PRESENTATION_GUIDE.md) |
-| **Total** | **100%** | ✅ **READY** | See [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) |
+| **System Calls** | 20% | ✅ Complete | 25+ documented in [03_OS_IMPLEMENTATION_DETAILS.md](./docs/03_OS_IMPLEMENTATION_DETAILS.md) |
+| **Performance** | 20% | ✅ Complete | Trade-offs in [03_OS_IMPLEMENTATION_DETAILS.md](./docs/03_OS_IMPLEMENTATION_DETAILS.md) |
+| **Total** | **100%** | ✅ **READY** | See [docs/00_MASTER_DOCUMENTATION_INDEX.md](./docs/00_MASTER_DOCUMENTATION_INDEX.md) |
 
 ---
 
@@ -375,24 +376,22 @@ C — Take screenshot
 ## 📖 Learning Paths
 
 ### Path A: Understand the Theory (Start here)
-1. [QUICKSTART_GUIDE.md](./QUICKSTART_GUIDE.md) - 10 min
-2. [docs/OS_IMPLEMENTATION.md](./docs/OS_IMPLEMENTATION.md) - 30 min
-3. Run: `python demo_os_features.py` - 5 min
+1. [docs/01_START_HERE_QUICK_5MIN.md](./docs/01_START_HERE_QUICK_5MIN.md) - 10 min
+2. [docs/03_OS_IMPLEMENTATION_DETAILS.md](./docs/03_OS_IMPLEMENTATION_DETAILS.md) - 30 min
+3. [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) - 20 min
 
-### Path B: Hands-On Testing (For hands-on learners)
-1. [TESTING_CHEATSHEET.md](./TESTING_CHEATSHEET.md) - 2 min to scan
-2. [MANUAL_TESTING_GUIDE.md](./MANUAL_TESTING_GUIDE.md) - 30 min (run all tests)
-3. Review: [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) - 10 min
+### Testing Path
+1. [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) - 5 min (cheat sheet)
+2. [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) - 30 min (run all tests)
 
-### Path C: Full Integration (For developers)
-1. [MISSILE_TRACKER_INTEGRATION.md](./MISSILE_TRACKER_INTEGRATION.md) - 45 min
-2. [OS_INTEGRATION_GUIDE.md](./OS_INTEGRATION_GUIDE.md) - 30 min
+### Integration Path
+1. [docs/04_HOW_OS_INTEGRATES_TRACKER.md](./docs/04_HOW_OS_INTEGRATES_TRACKER.md) - 20 min
+2. [docs/05_INTEGRATION_CODE_EXAMPLES.md](./docs/05_INTEGRATION_CODE_EXAMPLES.md) - 30 min
 3. Modify: `src/missile_tracker.py` with OS components - 60+ min
 
 ### Path D: Presentation Ready (For finals)
-1. [docs/PRESENTATION_GUIDE.md](./docs/PRESENTATION_GUIDE.md) - 20 min
+1. [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) - 20 min
 2. Practice with: `python demo_os_features.py` - 10 min
-3. Review: Q&A section in guide - 10 min
 
 ---
 
@@ -402,11 +401,11 @@ C — Take screenshot
 
 | Problem | Solution | More Info |
 |---------|----------|-----------|
-| Import errors | Run `setup.bat` or `setup.sh` | [QUICKSTART_GUIDE.md](./QUICKSTART_GUIDE.md) |
-| Slow FPS | Use `--auto-night` flag | [docs/OS_IMPLEMENTATION.md](./docs/OS_IMPLEMENTATION.md) |
-| Demo hangs | See timeout solutions | [MANUAL_TESTING_GUIDE.md](./MANUAL_TESTING_GUIDE.md) |
-| Need quick test | See cheatsheet | [TESTING_CHEATSHEET.md](./TESTING_CHEATSHEET.md) |
-| Presentation questions | See Q&A guide | [docs/PRESENTATION_GUIDE.md](./docs/PRESENTATION_GUIDE.md) |
+| Import errors | Run `setup.bat` or `setup.sh` | [docs/01_START_HERE_QUICK_5MIN.md](./docs/01_START_HERE_QUICK_5MIN.md) |
+| Slow FPS | Use `--auto-night` flag | [docs/03_OS_IMPLEMENTATION_DETAILS.md](./docs/03_OS_IMPLEMENTATION_DETAILS.md) |
+| Demo hangs | See timeout solutions | Follow [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) for: |
+| Need quick test | See cheatsheet | Follow [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) for: |
+| Presentation questions | See Q&A guide | [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) |
 
 ---
 
@@ -419,9 +418,9 @@ C — Take screenshot
 | `src/os_memory.py` | 400 lines | Frame buffer pooling |
 | `src/os_scheduler.py` | 240 lines | Task scheduling |
 | `src/os_file_manager.py` | 380 lines | I/O management |
-| `docs/OS_IMPLEMENTATION.md` | 450 lines | Technical theory |
-| `MISSILE_TRACKER_INTEGRATION.md` | 400 lines | Integration guide |
-| `docs/PRESENTATION_GUIDE.md` | 400 lines | Presentation ready |
+| `docs/03_OS_IMPLEMENTATION_DETAILS.md` | 450 lines | Technical theory |
+| `docs/06_TESTING_COMPLETE_PROCEDURES.md` | 1300 lines | Installation & tests |
+| `docs/08_PRESENTATION_CONTENT_GUIDE.md` | 400 lines | Presentation ready |
 
 **Total code:** ~2,700 lines | **Total documentation:** ~3,000+ lines
 
@@ -604,7 +603,7 @@ chmod +x setup.sh run.sh
 | [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) | Test procedures | 30 min |
 | [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) | Copy-paste commands | 5 min |
 | [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) | For presentations | 20 min |
-| [IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md) | Rubric coverage | 10 min |
+| [IMPLEMENTATION_SUMMARY.md](./docs/00_MASTER_DOCUMENTATION_INDEX.md) | Rubric coverage | 10 min |
 
 ---
 
@@ -716,7 +715,7 @@ names: ['missile'] # Class names
 python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 
 # Verify all dependencies installed
-python -c "from ultralytics import YOLO; print('✓ YOLOv8 ready')"
+python -c "from ultralytics import YOLO; print('[OK] YOLOv8 ready')"
 ```
 
 #### Step 2: Understand Training Parameters

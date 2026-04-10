@@ -4,7 +4,7 @@ This file contains all testing commands you can copy and paste directly.
 
 ---
 
-## 🚀 Run Everything At Once (Easiest)
+## (START) Run Everything At Once (Easiest)
 
 ```bash
 python demo_os_features.py
@@ -32,7 +32,7 @@ print('=== MUTEX TEST ===')
 print()
 
 mutex = Mutex('test_mutex', track_stats=True)
-print('✓ Created Mutex')
+print('[OK] Created Mutex')
 print()
 
 print('Test 1: Basic lock/unlock')
@@ -52,10 +52,10 @@ print('-' * 50)
 stats = mutex.stats
 print(f'  Total acquisitions: {stats.acquisitions}')
 print(f'  Contentions (waits): {stats.contentions}')
-print(f'  Max wait time: {stats.max_wait_time_us:.2f}µs')
-print(f'  Avg wait time: {stats.avg_wait_time_us():.2f}µs')
+print(f'  Max wait time: {stats.max_wait_time_us:.2f}us')
+print(f'  Avg wait time: {stats.avg_wait_time_us():.2f}us')
 print()
-print('✓ Mutex test passed')
+print('[OK] Mutex test passed')
 "
 ```
 
@@ -63,7 +63,7 @@ print('✓ Mutex test passed')
 ```
 === MUTEX TEST ===
 
-✓ Created Mutex
+[OK] Created Mutex
 
 Test 1: Basic lock/unlock
 --------------------------------------------------
@@ -87,7 +87,7 @@ print('=== SEMAPHORE TEST ===')
 print()
 
 sem = Semaphore(3, 'test_semaphore', track_stats=True)
-print('✓ Created Semaphore with initial count: 3')
+print('[OK] Created Semaphore with initial count: 3')
 print()
 
 print('Test 1: Resource allocation')
@@ -110,7 +110,7 @@ for i in range(3):
     print(f'  After signal {i+1}: count = {sem.count}')
 
 print()
-print('✓ Semaphore test passed')
+print('[OK] Semaphore test passed')
 "
 ```
 
@@ -129,7 +129,7 @@ print('=== RWLOCK TEST (Multi-Reader) ===')
 print()
 
 rwlock = RWLock('test_rwlock', track_stats=True)
-print('✓ Created RWLock')
+print('[OK] Created RWLock')
 print()
 
 print('Test 1: Multiple readers (concurrent)')
@@ -167,7 +167,7 @@ print(f'  Read contentions: {read_stats.contentions}')
 print(f'  Write acquisitions: {write_stats.acquisitions}')
 
 print()
-print('✓ RWLock test passed')
+print('[OK] RWLock test passed')
 "
 ```
 
@@ -186,7 +186,7 @@ print('=== CONDITION VARIABLE TEST ===')
 print()
 
 cv = ConditionVariable('test_cv')
-print('✓ Created ConditionVariable')
+print('[OK] Created ConditionVariable')
 print()
 
 print('Test 1: Signal and wait pattern')
@@ -208,7 +208,7 @@ is_ready = cv.wait(
 print(f'  Consumer: Woken up! Ready state: {is_ready}')
 
 print()
-print('✓ Condition Variable test passed')
+print('[OK] Condition Variable test passed')
 "
 ```
 
@@ -232,7 +232,7 @@ mem_mgr = MemoryManager(
     max_size_bytes=100_000_000,
     strategy=AllocationStrategy.POOL
 )
-print('✓ Created MemoryManager (100MB capacity)')
+print('[OK] Created MemoryManager (100MB capacity)')
 print()
 
 print('Test 1: Memory allocation')
@@ -270,7 +270,7 @@ print(f'  Current allocation: {stats.current_in_use / 1_000_000:.1f}MB')
 print(f'  Free blocks: {len(mem_mgr.free_blocks)}')
 
 print()
-print('✓ Memory Manager test passed')
+print('[OK] Memory Manager test passed')
 "
 ```
 
@@ -297,7 +297,7 @@ pool = FrameBufferPool(
     channels=3
 )
 capacity_mb = (5 * 1920 * 1080 * 3 * 4) / 1_000_000
-print(f'✓ Created Frame Buffer Pool')
+print(f'[OK] Created Frame Buffer Pool')
 print(f'  Capacity: {capacity_mb:.1f}MB')
 print()
 
@@ -343,10 +343,10 @@ for _ in range(1000):
 elapsed_ms = (time.perf_counter() - start) * 1000
 
 print(f'  1000 cycles: {elapsed_ms:.2f}ms')
-print(f'  Per cycle: {elapsed_ms/1000*1000:.2f}µs')
+print(f'  Per cycle: {elapsed_ms/1000*1000:.2f}us')
 
 print()
-print('✓ Frame Buffer Pool test passed')
+print('[OK] Frame Buffer Pool test passed')
 "
 ```
 
@@ -376,7 +376,7 @@ scheduler = init_global_scheduler(
     max_workers=2
 )
 scheduler.start()
-print('✓ Started scheduler (2 workers)')
+print('[OK] Started scheduler (2 workers)')
 print()
 
 def sample_task(name, duration):
@@ -421,7 +421,7 @@ print(f'  Context switches: {stats[\"context_switches\"]}')
 print()
 
 scheduler.stop()
-print('✓ Task Scheduler test passed')
+print('[OK] Task Scheduler test passed')
 "
 ```
 
@@ -442,7 +442,7 @@ print('=== FILE MANAGER TEST ===')
 print()
 
 fm = FileManager(data_dir='./test_os_files')
-print('✓ Created FileManager')
+print('[OK] Created FileManager')
 print()
 
 print('Test 1: Buffered I/O (Fast)')
@@ -485,7 +485,7 @@ print(f'  Total closes: {stats[\"total_closes\"]}')
 print(f'  Total fsyncs: {stats[\"total_fsyncs\"]}')
 
 print()
-print('✓ File Manager test passed')
+print('[OK] File Manager test passed')
 "
 ```
 
@@ -507,7 +507,7 @@ python demo_os_features.py
 
 ### Quick test all components compile:
 ```bash
-python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; from os_memory import MemoryManager; from os_scheduler import TaskScheduler; from os_file_manager import FileManager; print('✓ All compiled')"
+python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; from os_memory import MemoryManager; from os_scheduler import TaskScheduler; from os_file_manager import FileManager; print('[OK] All compiled')"
 ```
 
 ### Quick test imports work:
@@ -517,15 +517,15 @@ import sys
 sys.path.insert(0, 'src')
 print('Testing imports...')
 from os_synchronization import Mutex, Semaphore, RWLock
-print('✓ Synchronization imported')
+print('[OK] Synchronization imported')
 from os_memory import MemoryManager, FrameBufferPool
-print('✓ Memory imported')
+print('[OK] Memory imported')
 from os_scheduler import TaskScheduler
-print('✓ Scheduler imported')
+print('[OK] Scheduler imported')
 from os_file_manager import FileManager
-print('✓ File Manager imported')
+print('[OK] File Manager imported')
 print()
-print('✓ All components imported successfully!')
+print('[OK] All components imported successfully!')
 "
 ```
 
@@ -596,7 +596,7 @@ cat test_result.txt
 cd missile-detection-static-main
 
 # Then try again
-python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('✓')"
+python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK]')"
 ```
 
 ### "Permission denied"
@@ -621,18 +621,18 @@ chmod 755 .
 
 ### Good output includes:
 ```
-✓ [Feature] test passed
+[OK] [Feature] test passed
 ```
 
 ### Bad output includes:
 ```
-✗ [Feature] test failed
+[FAIL] [Feature] test failed
 Error: ...
 ```
 
 ### Performance output shows:
 ```
-Avg time: X.XXµs  (good = <10µs for pool)
+Avg time: X.XXus  (good = <10us for pool)
 Contentions: N     (good = 0 for readers)
 Fragmentation: X%  (good = 0%)
 ```

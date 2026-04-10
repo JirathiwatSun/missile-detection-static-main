@@ -132,7 +132,7 @@ while True:
     # 1. RESIZE using temporary NumPy array (fast)
     small_frame = cv2.resize(frame, (640, 480))
     
-    # 2. ACQUIRE from pool (NO malloc - takes ~0.1µs)
+    # 2. ACQUIRE from pool (NO malloc - takes ~0.1us)
     buffer = frame_pool.acquire()  
     if buffer is None:
         print("WARNING: All buffers in use!")
@@ -150,7 +150,7 @@ while True:
 
 | Operation | Traditional | With Pool | Speedup |
 |-----------|------------|-----------|---------|
-| Frame allocation | 200-500µs | <0.1µs | **5000x** |
+| Frame allocation | 200-500us | <0.1us | **5000x** |
 | GC pauses | 10-50ms | 0ms | **Eliminates jitter** |
 | 30 fps processing | ⚠️ Variable | ✅ Predictable | **Real-time ready** |
 
@@ -223,9 +223,9 @@ while True:
 
 ```
 Frame arrives at t=0ms
-├─ HIGH priority  : YOLO runs            [t=0-12ms]   ✓ completes in time
-├─ NORMAL priority: Kalman tracking      [t=12-14ms]  ✓ completes in time  
-└─ BACKGROUND    : Write log to disk     [t=14-16ms]  ✓ completes before next frame
+├─ HIGH priority  : YOLO runs            [t=0-12ms]   [OK] completes in time
+├─ NORMAL priority: Kalman tracking      [t=12-14ms]  [OK] completes in time  
+└─ BACKGROUND    : Write log to disk     [t=14-16ms]  [OK] completes before next frame
 
 Next frame arrives at t=16.67ms
 └─ (Previous frame logging still completing, but won't block next detection)
@@ -263,7 +263,7 @@ while True:
     detections = detector.process(frame)
     
     if detections:
-        # Fast write: buffered (10µs)
+        # Fast write: buffered (10us)
         log_line = json.dumps({
             "frame": frame_idx,
             "detections": detections,
@@ -282,14 +282,14 @@ while True:
 
 | Operation | Speed | Durability | Use Case |
 |-----------|-------|-----------|----------|
-| Buffered | 10µs | No guarantee | Frequent logs (frame counts, debug) |
-| Direct + fsync | 5000µs | Guaranteed on disk | Critical alerts (threats detected) |
+| Buffered | 10us | No guarantee | Frequent logs (frame counts, debug) |
+| Direct + fsync | 5000us | Guaranteed on disk | Critical alerts (threats detected) |
 | Decision | Trade-off: Speed vs Safety | | Allocate fsync budget wisely |
 
 **Example Budget for 60fps:**
 - Target budget: 16.67ms per frame
-- Log writes: 10-50 buffered lines = ~500µs (5% of budget)
-- 1 fsync every 10 frames = 500µs average (5% of budget)
+- Log writes: 10-50 buffered lines = ~500us (5% of budget)
+- 1 fsync every 10 frames = 500us average (5% of budget)
 - Total I/O overhead: ~10% - leaves 85% for detection/tracking
 
 ---
@@ -301,7 +301,7 @@ while True:
 **Without OS Components:**
 ```
 Frame 1 arrives (t=0ms)
-├─ Resize frame:            malloc buffer      (slow, variable 200-500µs)
+├─ Resize frame:            malloc buffer      (slow, variable 200-500us)
 ├─ YOLO inference:          on main thread     (12ms)
 ├─ Kalman update:           waits for YOLO     (blocks, unpredictable)
 ├─ Write log:               disk I/O waits     (could be 10ms+)
@@ -315,7 +315,7 @@ Result: 🔴 Lost frames at random intervals, unreliable tracking
 Frame 1 arrives (t=0ms)
 ├─ Mutex Lock:
 │  ├─ Resize (fast):        numpy already warm      (2ms)
-│  ├─ Acquire buffer:       from pool (0.1µs)       ✅ instant
+│  ├─ Acquire buffer:       from pool (0.1us)       ✅ instant
 │  └─ Unlock
 │
 ├─ High Priority Task:
@@ -399,7 +399,7 @@ Metric                    Value           Problem
 Frame processing:         18.5ms avg      ⚠️ Exceeds 16.67ms budget
 Worst case:              45ms            🔴 Significant frame drops
 Jitter (GC pauses):      2-15ms          ⚠️ Tracking stutters
-Buffer allocation:        300-500µs/frame 🔴 Accumulates over time
+Buffer allocation:        300-500us/frame 🔴 Accumulates over time
 Concurrent readers:       Count as writes 🔴 Serialized access
 Logging impact on FPS:    -8-10% FPS drop 🔴 Visible performance degradation
 
@@ -414,7 +414,7 @@ Metric                    Value           Improvement
 Frame processing:         15.2ms avg      ✅ Meeting 16.67ms budget
 Worst case:              17.1ms          ✅ Tight, but consistent
 Jitter (GC pauses):      0ms             ✅ Perfect smoothness
-Buffer allocation:        0.08µs/frame    ✅ 3750x faster!
+Buffer allocation:        0.08us/frame    ✅ 3750x faster!
 Concurrent readers:       50+ allowed     ✅ Near-zero contention
 Logging impact on FPS:    <0.5% FPS drop  ✅ Negligible
 
@@ -520,4 +520,4 @@ flame_thread.start()
 3. **Monitor performance** using the statistics each component provides
 4. **Compare results** before/after (FPS, jitter, consistency)
 
-🚀 **Result**: Professional-grade real-time missile detection system!
+(START) **Result**: Professional-grade real-time missile detection system!

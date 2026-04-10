@@ -6,14 +6,14 @@ This project now includes **4 major guides** to help you understand, test, and p
 
 | Guide | Purpose | Read Time | Location |
 |-------|---------|-----------|----------|
-| **MANUAL_TESTING_GUIDE.md** | Step-by-step testing of all components | 20 min | ← START HERE |
-| **OS_FEATURES_README.md** | How to use and integrate components | 15 min | Usage guide |
-| **docs/OS_IMPLEMENTATION.md** | Technical deep-dive | 30 min | For presentations |
-| **docs/PRESENTATION_GUIDE.md** | Presentation + Q&A prep | 20 min | For presentations |
+| **06_TESTING_COMPLETE_PROCEDURES.md** | Step-by-step testing of all components | 20 min | [View Here](./06_TESTING_COMPLETE_PROCEDURES.md) |
+| **02_COMPONENTS_TECHNICAL_DEEP_DIVE.md** | How to use and integrate components | 15 min | [View Here](./02_COMPONENTS_TECHNICAL_DEEP_DIVE.md) |
+| **03_OS_IMPLEMENTATION_DETAILS.md** | Technical deep-dive | 30 min | [View Here](./03_OS_IMPLEMENTATION_DETAILS.md) |
+| **08_PRESENTATION_CONTENT_GUIDE.md** | Presentation + Q&A prep | 20 min | [View Here](./08_PRESENTATION_CONTENT_GUIDE.md) |
 
 ---
 
-## 🚀 30-Second Quick Start
+## (START) 30-Second Quick Start
 
 ### Option 1: See Everything Working (Fastest)
 
@@ -25,7 +25,7 @@ This runs the complete integrated demonstration showing all OS components in act
 
 ### Option 2: Test One Component at a Time (Recommended for Learning)
 
-Follow the step-by-step guide in **MANUAL_TESTING_GUIDE.md**
+Follow the step-by-step guide in **[docs/06_TESTING_COMPLETE_PROCEDURES.md](./06_TESTING_COMPLETE_PROCEDURES.md)**
 
 ---
 
@@ -34,7 +34,7 @@ Follow the step-by-step guide in **MANUAL_TESTING_GUIDE.md**
 ### I want to...
 
 #### **Learn the Concepts**
-→ Read: `docs/OS_IMPLEMENTATION.md`
+→ Read: `docs/03_OS_IMPLEMENTATION_DETAILS.md`
 
 This explains:
 - What is Synchronization? (Mutex, Semaphore, RWLock)
@@ -43,7 +43,7 @@ This explains:
 - File I/O Trade-offs (Buffered vs fsync)
 
 #### **Test Everything Step-by-Step**
-→ Read: `MANUAL_TESTING_GUIDE.md`
+→ Read: `docs/06_TESTING_COMPLETE_PROCEDURES.md`
 
 Follow the sections:
 1. Prerequisites & Setup
@@ -54,7 +54,7 @@ Follow the sections:
 6. Run Integrated Demo
 
 #### **Prepare for Presentation**
-→ Read: `docs/PRESENTATION_GUIDE.md`
+→ Read: `docs/08_PRESENTATION_CONTENT_GUIDE.md`
 
 Includes:
 - 15-20 minute presentation structure
@@ -63,7 +63,7 @@ Includes:
 - Presentation tips
 
 #### **Integrate Into My Code**
-→ Read: `OS_FEATURES_README.md`
+→ Read: `docs/02_COMPONENTS_TECHNICAL_DEEP_DIVE.md`
 
 Shows:
 - How to import each component
@@ -86,16 +86,20 @@ missile-detection-static-main/
 │   └── missile_tracker.py       ← Original missile detection code
 │
 ├── docs/
-│   ├── OS_IMPLEMENTATION.md     ← Technical documentation
-│   ├── PRESENTATION_GUIDE.md    ← Presentation prep
-│   └── Presentation_Report.md   ← Original report
+│   ├── 00_MASTER_DOCUMENTATION_INDEX.md  ← Navigation hub (START HERE)
+│   ├── 01_START_HERE_QUICK_5MIN.md       ← You are here!
+│   ├── 02_COMPONENTS_TECHNICAL_DEEP_DIVE.md
+│   ├── 03_OS_IMPLEMENTATION_DETAILS.md
+│   ├── 04_HOW_OS_INTEGRATES_TRACKER.md
+│   ├── 05_INTEGRATION_CODE_EXAMPLES.md
+│   ├── 06_TESTING_COMPLETE_PROCEDURES.md
+│   ├── 07_TESTING_QUICK_REFERENCE.md
+│   ├── 08_PRESENTATION_CONTENT_GUIDE.md
+│   └── Presentation_Report.md            ← Original written report
 │
-├── demo_os_features.py          ← Integrated demo (RUN THIS!)
-│
-├── MANUAL_TESTING_GUIDE.md      ← Step-by-step testing (START HERE!)
-├── OS_FEATURES_README.md        ← Usage guide
-├── IMPLEMENTATION_SUMMARY.md    ← Project summary
-├── README.md                    ← Original project README
+├── demo_os_features.py                  ← Integrated demo (RUN THIS!)
+├── IMPLEMENTATION_SUMMARY.md            ← Project summary
+├── README.md                            ← Main project entry point
 │
 └── ... (other files)
 ```
@@ -115,13 +119,13 @@ from os_synchronization import Mutex
 from os_memory import MemoryManager
 from os_scheduler import TaskScheduler
 from os_file_manager import FileManager
-print('✓ All OS components imported successfully')
+print('[OK] All OS components imported successfully')
 "
 ```
 
 **Expected Output:**
 ```
-✓ All OS components imported successfully
+[OK] All OS components imported successfully
 ```
 
 ### Test 2: Quick Functionality Check
@@ -137,16 +141,16 @@ python demo_os_features.py
 
 ### Level 1: Basics (30 minutes)
 1. Run: `python demo_os_features.py`
-2. Read: First section of `docs/OS_IMPLEMENTATION.md`
-3. Try: Test Mutex from `MANUAL_TESTING_GUIDE.md`
+2. Read: First section of `docs/03_OS_IMPLEMENTATION_DETAILS.md`
+3. Try: Test Mutex from `docs/06_TESTING_COMPLETE_PROCEDURES.md`
 
 ### Level 2: Deep Dive (1 hour)
-1. Read: All of `docs/OS_IMPLEMENTATION.md`
-2. Try: Test all components from `MANUAL_TESTING_GUIDE.md`
+1. Read: All of `docs/03_OS_IMPLEMENTATION_DETAILS.md`
+2. Try: Test all components from `docs/06_TESTING_COMPLETE_PROCEDURES.md`
 3. Create: Run custom test scripts (examples provided)
 
 ### Level 3: Master (1.5 hours)
-1. Read: `docs/PRESENTATION_GUIDE.md`
+1. Read: `docs/08_PRESENTATION_CONTENT_GUIDE.md`
 2. Integrate: Use components in your own code
 3. Present: Prepare your presentation
 
@@ -189,12 +193,12 @@ pool = FrameBufferPool(
     width=1920
 )
 
-frame = pool.acquire()      # 1µs (pre-allocated)
+frame = pool.acquire()      # 1us (pre-allocated)
 process_frame(frame)
 pool.release(frame)         # Returns to pool
 ```
 
-**Benefit:** 5x faster allocation (1µs vs 8µs), 0% fragmentation
+**Benefit:** 5x faster allocation (1us vs 8us), 0% fragmentation
 
 ---
 
@@ -228,7 +232,7 @@ from os_file_manager import FileManager, FileMode, IOStrategy
 
 fm = FileManager()
 
-# Buffered (fast, 10µs)
+# Buffered (fast, 10us)
 fd = fm.open("log.txt", io_strategy=IOStrategy.BUFFERED)
 fm.write(fd, data, fsync=False)
 
@@ -257,9 +261,9 @@ The project covers all grading rubric criteria:
 | Rubric | Coverage | Location |
 |--------|----------|----------|
 | **OS Implementation (30%)** | 4 major components | src/os_*.py |
-| **System Calls (20%)** | 25+ system calls documented | docs/OS_IMPLEMENTATION.md |
-| **Performance (20%)** | Quantitative trade-off analysis | docs/OS_IMPLEMENTATION.md |
-| **Presentation (30%)** | Full guide + demo + Q&A | docs/PRESENTATION_GUIDE.md |
+| **System Calls (20%)** | 25+ system calls documented | [03_OS_IMPLEMENTATION_DETAILS.md](./03_OS_IMPLEMENTATION_DETAILS.md) |
+| **Performance (20%)** | Quantitative trade-off analysis | [03_OS_IMPLEMENTATION_DETAILS.md](./03_OS_IMPLEMENTATION_DETAILS.md) |
+| **Presentation (30%)** | Full guide + demo + Q&A | [08_PRESENTATION_CONTENT_GUIDE.md](./08_PRESENTATION_CONTENT_GUIDE.md) |
 
 ---
 
@@ -274,7 +278,7 @@ The project covers all grading rubric criteria:
 5. **File I/O** (2 min) - Buffered vs fsync
 6. **Q&A** (5 min) - Questions from evaluators
 
-See `docs/PRESENTATION_GUIDE.md` for complete presentation structure with talking points.
+See `docs/08_PRESENTATION_CONTENT_GUIDE.md` for complete presentation structure with talking points.
 
 ---
 
@@ -286,7 +290,7 @@ See `docs/PRESENTATION_GUIDE.md` for complete presentation structure with talkin
 cd missile-detection-static-main
 
 # Test import
-python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('✓')"
+python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK]')"
 ```
 
 ### "Permission denied" Error
@@ -315,10 +319,10 @@ When presenting, mention these concrete numbers:
 
 | Metric | Value | Impact |
 |--------|-------|--------|
-| Frame allocation speed | 1µs (vs 8µs) | **5x faster** |
+| Frame allocation speed | 1us (vs 8us) | **5x faster** |
 | Memory fragmentation | 0% (vs 25%) | **Eliminates GC pauses** |
 | RWLock reader contention | 0% | **Readers never block** |
-| I/O cost (buffered) | 10µs | **Very fast** |
+| I/O cost (buffered) | 10us | **Very fast** |
 | I/O cost (fsync) | 10ms | **1000x slower but safe** |
 
 ---
@@ -326,9 +330,9 @@ When presenting, mention these concrete numbers:
 ## 🎯 Next Steps
 
 1. **Quick Test** - Run: `python demo_os_features.py` (5 min)
-2. **Read Guide** - Follow: `MANUAL_TESTING_GUIDE.md` (20 min)
-3. **Deep Dive** - Study: `docs/OS_IMPLEMENTATION.md` (30 min)
-4. **Prepare Talk** - Review: `docs/PRESENTATION_GUIDE.md` (20 min)
+2. **Read Guide** - Follow: `docs/06_TESTING_COMPLETE_PROCEDURES.md` (20 min)
+3. **Deep Dive** - Study: `docs/03_OS_IMPLEMENTATION_DETAILS.md` (30 min)
+4. **Prepare Talk** - Review: `docs/08_PRESENTATION_CONTENT_GUIDE.md` (20 min)
 5. **Present** - Use all resources for excellent grade (15-20 min)
 
 ---
@@ -347,12 +351,12 @@ When presenting, mention these concrete numbers:
 | Need | Command |
 |------|---------|
 | Run full demo | `python demo_os_features.py` |
-| Test synchronization | See section 1 in MANUAL_TESTING_GUIDE.md |
-| Test memory | See section 2 in MANUAL_TESTING_GUIDE.md |
-| Test scheduler | See section 3 in MANUAL_TESTING_GUIDE.md |
-| Test file I/O | See section 4 in MANUAL_TESTING_GUIDE.md |
-| Read tech docs | `docs/OS_IMPLEMENTATION.md` |
-| Prep presentation | `docs/PRESENTATION_GUIDE.md` |
+| Test synchronization | See section 1 in docs/06_TESTING_COMPLETE_PROCEDURES.md |
+| Test memory | See section 2 in docs/06_TESTING_COMPLETE_PROCEDURES.md |
+| Test scheduler | See section 3 in docs/06_TESTING_COMPLETE_PROCEDURES.md |
+| Test file I/O | See section 4 in docs/06_TESTING_COMPLETE_PROCEDURES.md |
+| Read tech docs | `docs/03_OS_IMPLEMENTATION_DETAILS.md` |
+| Prep presentation | `docs/08_PRESENTATION_CONTENT_GUIDE.md` |
 
 ---
 
@@ -360,14 +364,14 @@ When presenting, mention these concrete numbers:
 
 After completing this manual, you'll understand:
 
-✓ How OS synchronization prevents race conditions  
-✓ Why memory pooling improves real-time performance  
-✓ How CPU scheduling algorithms differ  
-✓ Trade-offs between speed and data durability  
-✓ How to measure and communicate OS performance  
-✓ How to integrate OS concepts into production code  
+[OK] How OS synchronization prevents race conditions  
+[OK] Why memory pooling improves real-time performance  
+[OK] How CPU scheduling algorithms differ  
+[OK] Trade-offs between speed and data durability  
+[OK] How to measure and communicate OS performance  
+[OK] How to integrate OS concepts into production code  
 
 ---
 
-**Ready to begin? Start with `MANUAL_TESTING_GUIDE.md`! 🚀**
+**Ready to begin? Start with `docs/06_TESTING_COMPLETE_PROCEDURES.md`! (START)**
 
