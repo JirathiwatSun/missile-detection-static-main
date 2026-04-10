@@ -30,14 +30,12 @@ python -m src.missile_tracker --video sample.mp4
 ```
 
 **What the evaluator will see:**
-```
-[INFO] Loading YOLO model: ...
-[INFO] Initializing OS components...
-  - Synchronization: RWLocks + Mutex + ConditionVariable
-  - Memory: Pool allocator (500MB max)
-  - File Manager: Detection logs -> detection_logs/detections_1712767234.log
-  - Task Scheduler: Priority-based scheduling
-[INFO] OS components initialized successfully
+```text
+[ READY ] Kernel              | OS subsystems initialized successfully
+[ READY ] Synchronization     | RWLocks + Mutex + ConditionVariable
+[ READY ] Memory              | Pool allocator (500MB max)
+[ READY ] File Manager        | Detection logs -> detections_1712767234.log
+[ READY ] Task Scheduler      | Priority-based scheduling
 
 [FPS: 58.3] | Target Hits: 3
 [FPS: 59.1] | Target Hits: 5
@@ -51,32 +49,35 @@ python -m src.missile_tracker --video sample.mp4
 
 ### Part 2: Show the Statistics (1 minute)
 
-After video finishes, evaluator sees:
-```
-[INFO] Shutting down OS components...
-[INFO] Detection logs saved: detection_logs/detections_1712767234.log
+After video finishes, evaluator sees the **Tactical Mission Control Dashboard**:
+```text
+[MISSION DEBRIEF: OS SUBSYSTEM PERFORMANCE]
+======================================================================
+MISSION CONTEXT: Final analysis of kernel throughput and resource management.
+----------------------------------------------------------------------
+[SYNCED ] Telemetry Log             Data persisted to: detections_1712767234.log
 
-[OS STATISTICS]
-  Total frames processed: 1500
-  Total detections logged: 4250
-  Average detections per frame: 2.83
+[MASTER PERFORMANCE DASHBOARD]
++-----------+---------------+---------------------------+
+| Subsystem | Metric        | Value                     |
++-----------+---------------+---------------------------+
+| General   | Total Frames  | 1500                      |
+| General   | Detections    | 4250                      |
+| Scheduler | Throughput    | 48.1 tps                  |
+| Scheduler | Turnaround    | 12.5 ms                   |
+| Memory    | Cap Peak (MB) | 485.2                     |
++-----------+---------------+---------------------------+
 
-  Tracker Lock (RWLock):
-    - Read acquisitions: 0
-    - Write acquisitions: 1500        ← PROOF: 1500 tracker updates
-    - Read contentions: 0             ← PROOF: No contention
-    - Write contentions: 12           ← PROOF: Only 12 waits in 1500 updates
+[RESOURCE SYNCHRONIZATION ANALYTICS]
++------------+-----------+--------------+-------------+
+| Resource   | Lock Type | Acquisitions | Contentions |
++------------+-----------+--------------+-------------+
+| Tracker    | RWLock    | 1500         | 12          |
+| Detections | RWLock    | 4250         | 0           |
+| Frame Buf  | Mutex     | 1500         | 0           |
++------------+-----------+--------------+-------------+
 
-  Detections Lock (RWLock):
-    - Read acquisitions: 0
-    - Write acquisitions: 0
-
-  Frame Buffer Lock (Mutex):
-    - Acquisitions: 1500              ← PROOF: Every frame used mutex
-    - Contentions: 0                  ← PROOF: Never had to wait
-    - Max wait time: 0.23us           ← PROOF: Minimal lock overhead
-
-[INFO] OS components shut down.
+[ DONE  ] Kernel              | OS subsystems shut down gracefully.
 ```
 
 **Point out:**

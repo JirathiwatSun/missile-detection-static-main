@@ -528,17 +528,20 @@ print(file_mgr.get_global_stats())
 
 ```bash
 # Run with OS monitoring
-python demo_os_features.py
+python src/missile_tracker.py --video data/videos/Iron_Dome.mp4
 
-# Expected output:
-# ===== SYNCHRONIZATION STATS =====
-# Lock contention: 0.5% (good)
-# ===== MEMORY STATS =====
-# Fragmentation: 2.1% (excellent)
-# ===== FILE I/O STATS =====
-# Fsync ratio: 1:99 (appropriate)
-# ===== SCHEDULING STATS =====
-# Context switches: 150
+# Expected Tactical Output:
+[ READY ] Kernel              | OS subsystems initialized successfully
+[ READY ] Synchronization     | RWLocks + Mutex + ConditionVariable
+...
+[MISSION DEBRIEF: OS SUBSYSTEM PERFORMANCE]
+[MASTER PERFORMANCE DASHBOARD]
++-----------+---------------+------------+
+| Subsystem | Metric        | Value      |
++-----------+---------------+------------+
+| Scheduler | Throughput    | 48.1 tps   |
+| Scheduler | Turnaround    | 12.5 ms    |
++-----------+---------------+------------+
 ```
 
 ---

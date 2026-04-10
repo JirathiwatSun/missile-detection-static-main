@@ -621,8 +621,9 @@ chmod 755 .
 ## 📊 Interpreting Test Output
 
 ### Good output includes:
-```
-[OK] [Feature] test passed
+```text
+[ READY ] Component test passed
+[ DONE  ] Logic verified
 ```
 
 ### Bad output includes:

@@ -403,35 +403,15 @@ The integration is **now live** in the code. Here's exactly what happens:
 
 ```python
 # Line ~1020 in run() function
+TacticalDisplay.header()
 print("[INFO] Initializing OS components...")
 
-# Synchronization primitives for thread-safe access
-detections_lock = RWLock("detections_access", track_stats=True)
-tracker_lock = RWLock("tracker_state", track_stats=True)
-frame_buffer_lock = Mutex("frame_buffer", track_stats=True)
-detection_ready = ConditionVariable("detection_ready")
-
-# Memory manager for efficient allocation
-memory_manager = MemoryManager(max_size_bytes=500_000_000, strategy=AllocationStrategy.POOL)
-
-# File manager for detection logging with durability
-file_manager = FileManager(data_dir=os.path.join(BASE_DIR, "detection_logs"))
-log_file_path = f"detections_{int(time.time())}.log"
-detection_log_fd = file_manager.open(log_file_path, FileMode.WRITE, IOStrategy.BUFFERED)
-
-# Task scheduler for managing detection and tracking tasks
-scheduler = TaskScheduler(strategy=SchedulingStrategy.PRIORITY)
-scheduler.start() # Start OS workers
-
-# Launch background tactical monitor for contention simulation
-monitor_running = True
-threading.Thread(target=tactical_monitor_thread, daemon=True).start()
-
-print("[INFO] OS components initialized successfully")
-print(f"  - Synchronization: RWLocks + Mutex + ConditionVariable")
-print(f"  - Memory: Pool allocator (500MB max)")
-print(f"  - File Manager: Detection logs -> {log_file_path}")
-print(f"  - Task Scheduler: Priority-based scheduling")
+# Status logs using high-fidelity tactical blocks
+TacticalDisplay.status("Kernel", "READY", "OS subsystems initialized successfully")
+TacticalDisplay.status("Synchronization", "READY", "RWLocks + Mutex + ConditionVariable")
+TacticalDisplay.status("Memory", "READY", "Pool allocator (500MB max)")
+TacticalDisplay.status("File Manager", "READY", f"Detection logs -> {log_file_path}")
+TacticalDisplay.status("Task Scheduler", "READY", "Priority-based scheduling")
 ```
 
 ### Main Processing Loop (per-frame)

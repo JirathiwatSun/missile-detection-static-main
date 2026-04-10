@@ -330,13 +330,12 @@ missile-detection-static-main/
 ## 📊 Performance Gains
 
 | Metric | Before OS | After OS | Improvement |
-|--------|-----------|----------|-------------|
-| **FPS** | 30-35 fps (variable) | 60 fps (consistent) | **2x faster** ✅ |
-| **Throughput** | ~20 tasks/sec | 48.1 tasks/sec | **2.4x higher** ✅ |
-| **Turnaround** | 50-100ms jitter | 10-15ms precise | **5x lower latency** ✅ |
-| **Contention** | N/A (unmanaged) | Managed (resolved) | **Deterministic** ✅ |
-| **Buffer allocation** | 200-500us/frame | 0.1us/frame | **5000x faster** ✅ |
-| **Tracking reliability** | Frame drops at random | Zero drops ever | **Total Stability** ✅ |
+|:---|:---|:---|:---|
+| **FPS Stability** | 30-35 fps (variable) | 60 fps (consistent) | **2x faster** ✅ |
+| **Mission Throughput** | ~20 tasks/sec | 48.1 tasks/sec | **2.4x higher** ✅ |
+| **Kernel Turnaround** | 50-100ms jitter | 10-15ms precise | **5x lower latency** ✅ |
+| **Memory Allocation** | 200-500us/frame | 0.1us/frame | **5000x faster** ✅ |
+| **Lock Contentions** | N/A (unmanaged) | Managed (resolved) | **Tactical Stability** ✅ |
 
 ---
 
