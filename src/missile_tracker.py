@@ -1098,7 +1098,9 @@ def run(source, weights: str, conf: float, show_window: bool,
     monitor_running = True
     def tactical_monitor():
         while monitor_running:
-            # Randomly peek at detections and frame buffer at high frequency
+            # Randomly peek at tracker, detections, and frame buffer to simulate contention
+            with tracker_lock.reader_lock():
+                time.sleep(0.0001)
             with detections_lock.reader_lock():
                 time.sleep(0.0001) # 100 microseconds of "processing"
             with frame_buffer_lock:
@@ -1526,7 +1528,7 @@ def run(source, weights: str, conf: float, show_window: bool,
     Sync_Data = [
         ["Resource", "Lock Type", "Acquisitions", "Contentions"],
         ["Tracker", "RWLock", str(tracker_lock.stats['reads'].acquisitions + tracker_lock.stats['writes'].acquisitions), str(tracker_lock.stats['reads'].contentions + tracker_lock.stats['writes'].contentions)],
-        ["Detections", "RWLock", str(detections_lock.stats['reads'].acquisitions + detections_lock.stats['writes'].acquisitions), "0"],
+        ["Detections", "RWLock", str(detections_lock.stats['reads'].acquisitions + detections_lock.stats['writes'].acquisitions), str(detections_lock.stats['reads'].contentions + detections_lock.stats['writes'].contentions)],
         ["Frame Buf", "Mutex", str(frame_buffer_lock.stats.acquisitions), str(frame_buffer_lock.stats.contentions)]
     ]
 
