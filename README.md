@@ -221,7 +221,7 @@ missile-detection-static-main/
 ## 📂 Project Structure
 
 ```
-├── 📁 docs/                                    ← COMPLETE DOCUMENTATION (9 Files)
+├── 📁 docs/                                    ← COMPLETE DOCUMENTATION (10 Files)
 │   ├── 00_MASTER_DOCUMENTATION_INDEX.md        ← Start here: Navigation hub
 │   ├── 01_START_HERE_QUICK_5MIN.md             ← Quick start (5 min)
 │   ├── 02_COMPONENTS_TECHNICAL_DEEP_DIVE.md    ← Technical details (30 min)
@@ -231,15 +231,15 @@ missile-detection-static-main/
 │   ├── 06_TESTING_COMPLETE_PROCEDURES.md       ← Full testing guide (30 min)
 │   ├── 07_TESTING_QUICK_REFERENCE.md           ← Test cheat sheet (5 min)
 │   ├── 08_PRESENTATION_CONTENT_GUIDE.md        ← For presentations (20 min)
-│   ├── Presentation_Report.md                  ← Written report
-│   └── README.dataset.txt                      ← Dataset information
+│   └── Presentation_Report.md                  ← Written report
 │
 ├── 📁 src/                                     ← Source code (Python)
-│   ├── missile_tracker.py                      ← Main application (1000+ lines)
+│   ├── __init__.py                             ← Package initializer
+│   ├── missile_tracker.py                      ← Main application (1300+ lines)
 │   ├── os_synchronization.py                   ← Mutex, Semaphore, RWLock (350 lines)
-│   ├── os_memory.py                            ← Frame buffer pooling (400 lines)
-│   ├── os_scheduler.py                         ← Priority task scheduling (240 lines)
-│   └── os_file_manager.py                      ← I/O management (380 lines)
+│   ├── os_memory.py                            ← Frame buffer pooling (360 lines)
+│   ├── os_scheduler.py                         ← Priority task scheduling (320 lines)
+│   └── os_file_manager.py                      ← I/O management (400 lines)
 │
 ├── 📁 models/                                  ← Pre-trained weights
 │   ├── yolo26n_custom.pt                       ← Default detector (35MB)
@@ -249,12 +249,23 @@ missile-detection-static-main/
 │   ├── videos/                                 ← Test videos
 │   └── images/                                 ← Sample frames
 │
-├── 📁 datasets/FINAL-MISSILES-2/               ← Training dataset (9,206 images)
+├── 📁 datasets/                                ← Dataset root
+│   └── FINAL-MISSILES-2/                       ← Training dataset (9,206 images)
+│
+├── 📁 scripts/                                 ← Utility scripts
+│   ├── download_data.py                        ← Data downloader
+│   └── train_yolo26.py                         ← Training script
+│
+├── 📁 os_demo_data/                            ← Generated demo logs
+├── 📁 detections/                              ← Tracking results
+├── 📁 runs/                                    ← Training results
 │
 ├── demo_os_features.py                         ← OS component demo (runnable)
 ├── run.bat / run.sh                            ← Launch scripts
 ├── setup.bat / setup.sh                        ← One-click environment setup
-└── config.cfg                                  ← Configuration file
+├── requirements.txt                            ← Python dependencies
+├── config.cfg                                  ← Configuration file
+└── .gitignore                                  ← Git exclusion rules
 ```
 
 ---
