@@ -251,6 +251,7 @@ missile-detection-static-main/
 │
 ├── 📁 datasets/                                ← Dataset root
 │   └── FINAL-MISSILES-2/                       ← Training dataset (9,206 images)
+│       └── README.dataset.md                   ← Dataset information
 │
 ├── 📁 scripts/                                 ← Utility scripts
 │   ├── download_data.py                        ← Data downloader
@@ -933,7 +934,7 @@ Disable with: `--augment false`
 
 | Source | Format | Cost | Size |
 |--------|--------|------|------|
-| [Roboflow](https://universe.roboflow.com/) | YOLO ready | Free | Varies |
+| [Roboflow Universe](https://universe.roboflow.com/qedwdqw/final-missiles) | YOLO ready | Free | Varies |
 | [Kaggle](https://www.kaggle.com) | Various | Free | Large |
 | [OpenDIV8](https://opencv4tegra.org/data) | Various | Free | Medium |
 | [Labelimg](https://github.com/heartexlabs/labelImg) | DIY tool | Free | Depends |
