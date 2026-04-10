@@ -980,8 +980,7 @@ def run(source, weights: str, conf: float, show_window: bool,
     if not ret: sys.exit("[ERROR] Cannot read video.")
     native_h, native_w = test_frame.shape[:2]
     
-    global ui_sc
-    ui_sc = native_h / 720.0
+    ui_scale = native_h / 720.0
 
     w_orig = native_w   # safe default so end-of-stream display never raises NameError
     current_ground_frac = ground_fraction
@@ -1294,7 +1293,7 @@ def run(source, weights: str, conf: float, show_window: bool,
                     inter = max(0, ix2-ix1) * max(0, iy2-iy1)
                     
                     if inter > 0 and (inter / float(min(box[2]*box[3], k_box[2]*k_box[3]) + 1e-6)) > 0.85: duplicate = True
-                    if math.hypot((box[0]+box[2]/2) - (k_box[0]+k_box[2]/2), (box[1]+box[3]/2) - (k_box[1]+k_box[3]/2)) < max(12.0*ui_sc, min(box[2], box[3]) * 0.40): duplicate = True
+                    if math.hypot((box[0]+box[2]/2) - (k_box[0]+k_box[2]/2), (box[1]+box[3]/2) - (k_box[1]+k_box[3]/2)) < max(12.0*ui_scale, min(box[2], box[3]) * 0.40): duplicate = True
                 
                 if not duplicate: final_hits.append(h_det)
     
@@ -1332,7 +1331,7 @@ def run(source, weights: str, conf: float, show_window: bool,
                 bx, by, bw, bh = hit["box"]
                 # Determine if this target is inside the central HUD targeting ring
                 h_fr, w_fr = display.shape[:2]
-                ring_r = int(220 * ui_sc)
+                ring_r = int(220 * ui_scale)
                 cx_fr, cy_fr = w_fr // 2, h_fr // 2
                 hit_cx = bx + bw // 2
                 hit_cy = by + bh // 2
@@ -1340,11 +1339,11 @@ def run(source, weights: str, conf: float, show_window: bool,
 
                 is_missile_hit = is_missile_class(hit.get("label", "")) or hit.get("source") == "flame"
                 draw_detection(display, bx, by, bx+bw, by+bh, hit["label"], hit["confidence"],
-                               is_missile_hit, night_mode, frame_idx, hit["tid"], ui_sc,
+                               is_missile_hit, night_mode, frame_idx, hit["tid"], ui_scale,
                                dx=hit.get("dx", 0.0), dy=hit.get("dy", 0.0),
                                source=hit["source"], in_ring=target_in_ring)
     
-            trail_yolo.draw(display, night_mode, ui_sc)
+            trail_yolo.draw(display, night_mode, ui_scale)
     
             threat = "CLEAR" if missile_count == 0 else "CAUTION" if missile_count <= 3 else "CRITICAL" if missile_count <= 7 else "THREAT DETECTED"
     
@@ -1352,7 +1351,7 @@ def run(source, weights: str, conf: float, show_window: bool,
             sys.stdout.flush()
     
             if show_window:
-                annotated = draw_hud(display, active_hits, fps, paused, night_mode, sensor_state, display_filter, frame_idx, brightness, threat, ui_sc, current_ground_frac, is_auto_ground)
+                annotated = draw_hud(display, active_hits, fps, paused, night_mode, sensor_state, display_filter, frame_idx, brightness, threat, ui_scale, current_ground_frac, is_auto_ground)
                 cv2.imshow("Iron Dome Missile Tracker v3", cv2.resize(annotated, (1280, 720)) if w_orig > 1920 else annotated)
             else:
                 annotated = display
