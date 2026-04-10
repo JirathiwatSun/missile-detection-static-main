@@ -398,32 +398,32 @@ if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     
-    print("=== OS MEMORY MANAGEMENT DEMO ===")
+    print("=== TACTICAL OS MEMORY MANAGEMENT DEMO ===")
     print()
 
     # 1. Test MemoryManager
-    print("Test 1: MemoryManager Allocation")
+    print("Test 1: Missile Data Allocation (MemoryManager)")
     mm = MemoryManager(max_size_bytes=1000000, strategy=AllocationStrategy.POOL)
-    block = mm.allocate(1000, owner="demo_task")
+    block = mm.allocate(1000, owner="radar_signal_processor")
     if block:
-        print(f"  [OK] Allocated 1000 bytes at {block.address_str()}")
+        print(f"  [OK] Allocated 1000 bytes for radar_signal_processor at {block.address_str()}")
     
     stats = mm.get_summary()
     print(f"  [OK] Current usage: {stats['current_in_use_mb']:.4f} MB")
     print()
 
     # 2. Test FrameBufferPool
-    print("Test 2: FrameBufferPool (Pre-allocation)")
-    # Simulate 1080p RGB frame
+    print("Test 2: Tactical Radar Frame Pool (Pre-allocation)")
+    # Simulate 1080p RGB frame for tactical display
     frame_size = 1920 * 1080 * 3 
     pool = FrameBufferPool(buffer_size=frame_size, num_buffers=3, height=1080, width=1920)
     
     buf = pool.acquire()
     if buf is not None:
-        print(f"  [OK] Acquired frame buffer (Shape: {buf.shape})")
-        print(f"  [OK] Pool utilization: {pool.get_utilization():.1f}%")
+        print(f"  [OK] Acquired Tactical Radar Frame buffer (Shape: {buf.shape})")
+        print(f"  [OK] Radar pool utilization: {pool.get_utilization():.1f}%")
         pool.release(buf)
-        print(f"  [OK] Released buffer back to pool")
+        print(f"  [OK] Released radar buffer back to tactical pool")
     
     print()
-    print("[OK] All memory management tests passed")
+    print("[OK] All tactical memory management tests passed")

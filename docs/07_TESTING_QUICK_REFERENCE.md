@@ -31,19 +31,20 @@ import time
 print('=== MUTEX TEST ===')
 print()
 
-mutex = Mutex('test_mutex', track_stats=True)
-print('[OK] Created Mutex')
+# Create tactical mutex with statistics tracking
+mutex = Mutex('interceptor_fire_lock', track_stats=True)
+print('[OK] Created Tactical Mutex')
 print()
 
-print('Test 1: Basic lock/unlock')
+print('Test 1: Missile Guidance Lock')
 print('-' * 50)
 
 for i in range(5):
     mutex.lock()
-    print(f'  Iteration {i+1}: Locked')
+    print(f'  Iteration {i+1}: GUIDANCE SECURED')
     time.sleep(0.01)
     mutex.unlock()
-    print(f'  Iteration {i+1}: Unlocked')
+    print(f'  Iteration {i+1}: GUIDANCE RELEASED')
 
 print()
 
@@ -86,31 +87,31 @@ from os_synchronization import Semaphore
 print('=== SEMAPHORE TEST ===')
 print()
 
-sem = Semaphore(3, 'test_semaphore', track_stats=True)
-print('[OK] Created Semaphore with initial count: 3')
+sem = Semaphore(3, 'detector_thread_pool', track_stats=True)
+print('[OK] Created Tactical Semaphore (Pool size: 3)')
 print()
 
-print('Test 1: Resource allocation')
+print('Test 1: Radar Thread Allocation')
 print('-' * 50)
 
-print(f'  Initial count: {sem.count}')
+print(f'  Initial capacity: {sem.count}')
 print()
 
 for i in range(3):
     sem.wait()
-    print(f'  After wait {i+1}: count = {sem.count}')
+    print(f'  After assignment {i+1}: slots_remaining = {sem.count}')
 
 print()
 
-print('Test 2: Resource deallocation')
+print('Test 2: Module Deactivation')
 print('-' * 50)
 
 for i in range(3):
     sem.signal()
-    print(f'  After signal {i+1}: count = {sem.count}')
+    print(f'  After release {i+1}: slots_available = {sem.count}')
 
 print()
-print('[OK] Semaphore test passed')
+print('[OK] Tactical Semaphore test passed')
 "
 ```
 
@@ -128,7 +129,7 @@ from os_synchronization import RWLock
 print('=== RWLOCK TEST (Multi-Reader) ===')
 print()
 
-rwlock = RWLock('test_rwlock', track_stats=True)
+rwlock = RWLock('radar_data_access', track_stats=True)
 print('[OK] Created RWLock')
 print()
 
@@ -185,7 +186,7 @@ from os_synchronization import ConditionVariable
 print('=== CONDITION VARIABLE TEST ===')
 print()
 
-cv = ConditionVariable('test_cv')
+cv = ConditionVariable('interceptor_ready_signal')
 print('[OK] Created ConditionVariable')
 print()
 
@@ -240,9 +241,9 @@ print('-' * 50)
 
 blocks = []
 for i in range(5):
-    block = mem_mgr.allocate(1_000_000, owner=f'block_{i}')
+    block = mem_mgr.allocate(1_000_000, owner=f'missile_data_{i}')
     blocks.append(block)
-    print(f'  Allocated block {i}: {block.address_str()} (1MB)')
+    print(f'  Allocated block {i}: {block.address_str()} (1MB TELEMETRY)')
 
 print()
 
@@ -379,7 +380,7 @@ scheduler.start()
 print('[OK] Started scheduler (2 workers)')
 print()
 
-def sample_task(name, duration):
+def tactical_mission(name, duration):
     time.sleep(duration)
     return f'{name} completed'
 
@@ -403,9 +404,9 @@ for name, duration, priority in tasks:
 
 print()
 
-print('Test 2: Wait for execution')
+print('Test 2: Mission Execution')
 print('-' * 50)
-print('  Processing tasks...')
+print('  Executing tactical missions...')
 time.sleep(1)
 
 print()

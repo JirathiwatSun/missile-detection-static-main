@@ -118,25 +118,25 @@ print('=== MUTEX TEST ===')
 print()
 
 # Create mutex with statistics tracking
-mutex = Mutex('test_mutex', track_stats=True)
-print('[OK] Created Mutex')
+mutex = Mutex('interceptor_fire_lock', track_stats=True)
+print('[OK] Created Tactical Mutex')
 print()
 
 # Test basic lock/unlock
-print('Test 1: Basic lock/unlock')
+print('Test 1: Missile Guidance Lock')
 print('-' * 50)
 
 for i in range(5):
     mutex.lock()
-    print(f'  Iteration {i+1}: Locked')
+    print(f'  Iteration {i+1}: GUIDANCE SECURED')
     time.sleep(0.01)
     mutex.unlock()
-    print(f'  Iteration {i+1}: Unlocked')
+    print(f'  Iteration {i+1}: GUIDANCE RELEASED')
 
 print()
 
 # Show statistics
-print('Test 2: Statistics')
+print('Test 2: Synchronization Telemetry')
 print('-' * 50)
 stats = mutex.stats
 print(f'  Total acquisitions: {stats.acquisitions}')
@@ -144,7 +144,7 @@ print(f'  Contentions (waits): {stats.contentions}')
 print(f'  Max wait time: {stats.max_wait_time_us:.2f}us')
 print(f'  Avg wait time: {stats.avg_wait_time_us():.2f}us')
 print()
-print('[OK] Mutex test passed')
+print('[OK] Tactical Mutex test passed')
 "
 ```
 
@@ -188,36 +188,36 @@ print('=== SEMAPHORE TEST ===')
 print()
 
 # Create semaphore (max 3 resources)
-sem = Semaphore(3, 'test_semaphore', track_stats=True)
-print('[OK] Created Semaphore with initial count: 3')
+sem = Semaphore(3, 'radar_processing_threads', track_stats=True)
+print('[OK] Created Tactical Semaphore (Pool size: 3)')
 print()
 
 # Simulate resource allocation
-print('Test 1: Resource allocation')
+print('Test 1: Radar Thread Allocation')
 print('-' * 50)
 
-print(f'  Initial count: {sem.count}')
+print(f'  Initial capacity: {sem.count}')
 print()
 
 # Allocate resources
 for i in range(3):
     sem.wait()
-    print(f'  After wait {i+1}: count = {sem.count}')
+    print(f'  After assignment {i+1}: slots_remaining = {sem.count}')
 
 print()
-print('  All resources allocated!')
+print('  All detector modules active!')
 print()
 
 # Deallocate resources
-print('Test 2: Resource deallocation')
+print('Test 2: Module Deactivation')
 print('-' * 50)
 
 for i in range(3):
     sem.signal()
-    print(f'  After signal {i+1}: count = {sem.count}')
+    print(f'  After release {i+1}: slots_available = {sem.count}')
 
 print()
-print('[OK] Semaphore test passed')
+print('[OK] Tactical Semaphore test passed')
 "
 ```
 
@@ -260,7 +260,7 @@ from os_synchronization import RWLock
 print('=== RWLOCK TEST (Multi-Reader) ===')
 print()
 
-rwlock = RWLock('test_rwlock', track_stats=True)
+rwlock = RWLock('radar_data_access', track_stats=True)
 print('[OK] Created RWLock')
 print()
 
@@ -376,7 +376,7 @@ from os_synchronization import ConditionVariable
 print('=== CONDITION VARIABLE TEST ===')
 print()
 
-cv = ConditionVariable('test_cv')
+cv = ConditionVariable('interceptor_ready_signal')
 print('[OK] Created ConditionVariable')
 print()
 
@@ -449,18 +449,18 @@ mem_mgr = MemoryManager(
     max_size_bytes=100_000_000,
     strategy=AllocationStrategy.POOL
 )
-print('[OK] Created MemoryManager (100MB capacity)')
+print('[OK] Created Tactical MemoryManager (100MB Capacity)')
 print()
 
 # Test allocation
-print('Test 1: Memory allocation')
+print('Test 1: Missile Telemetry Allocation')
 print('-' * 50)
 
 blocks = []
 for i in range(5):
-    block = mem_mgr.allocate(1_000_000, owner=f'block_{i}')
+    block = mem_mgr.allocate(1_000_000, owner=f'missile_data_{i}')
     blocks.append(block)
-    print(f'  Allocated block {i}: {block.address_str()} (1MB)')
+    print(f'  Allocated block {i}: {block.address_str()} (1MB TELEMETRY)')
 
 print()
 
@@ -926,11 +926,11 @@ from os_synchronization import Mutex, RWLock
 import threading
 import time
 
-def test_mutex_contention():
+def test_guidance_lock_contention():
     """Test mutex with multiple threads"""
     print("=== Mutex Contention Test ===")
     
-    mutex = Mutex("test", track_stats=True)
+    mutex = Mutex("tactical_frame_buffer", track_stats=True)
     shared_counter = {'value': 0}
     
     def increment():
@@ -957,11 +957,11 @@ def test_mutex_contention():
           f"{mutex.stats.contentions} contentions")
     print()
 
-def test_rwlock_contention():
+def test_radar_access_contention():
     """Test RWLock with multiple readers and writers"""
     print("=== RWLock Contention Test ===")
     
-    rwlock = RWLock("test", track_stats=True)
+    rwlock = RWLock("radar_contention_test", track_stats=True)
     shared_data = {'value': 0}
     
     def reader():
@@ -1000,8 +1000,8 @@ def test_rwlock_contention():
     print()
 
 if __name__ == "__main__":
-    test_mutex_contention()
-    test_rwlock_contention()
+    test_guidance_lock_contention()
+    test_radar_access_contention()
     print("[OK] Contention tests complete")
 ```
 

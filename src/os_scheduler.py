@@ -361,36 +361,36 @@ if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     
-    print("=== OS TASK SCHEDULER DEMO ===")
+    print("=== TACTICAL OS TASK SCHEDULER DEMO ===")
     print()
 
     # Initialize scheduler
     scheduler = init_global_scheduler(strategy=SchedulingStrategy.PRIORITY, max_workers=2)
     scheduler.start()
-    print("[OK] Started scheduler with 2 workers")
+    print("[OK] Started tactical scheduler with 2 workers")
 
     # Define a simple task
-    def demo_task(name, sleep_time):
-        print(f"  Task {name} starting...")
+    def tactical_task(name, sleep_time):
+        print(f"  Mission {name} starting...")
         time.sleep(sleep_time)
-        print(f"  Task {name} finished")
+        print(f"  Mission {name} completed")
         return f"Result of {name}"
 
     # Submit tasks
-    print("Test 1: Submitting tasks with different priorities")
-    t1 = scheduler.submit_task(demo_task, args=("High-Prio", 0.1), priority=TaskPriority.HIGH)
-    t2 = scheduler.submit_task(demo_task, args=("Normal-Prio", 0.2), priority=TaskPriority.NORMAL)
+    print("Test 1: Submitting missions with tactical priorities")
+    t1 = scheduler.submit_task(tactical_task, args=("Missile-Evasion-High", 0.1), priority=TaskPriority.HIGH)
+    t2 = scheduler.submit_task(tactical_task, args=("Telemetry-Logging-Normal", 0.2), priority=TaskPriority.NORMAL)
     
-    print(f"  Submitted Task 1 (ID: {t1})")
-    print(f"  Submitted Task 2 (ID: {t2})")
+    print(f"  Submitted Mission 1 (ID: {t1})")
+    print(f"  Submitted Mission 2 (ID: {t2})")
     
     # Wait for execution
     time.sleep(0.5)
     
     stats = scheduler.get_global_stats()
-    print(f"  [OK] Tasks completed: {stats['completed_tasks']}")
-    print(f"  [OK] Avg turnaround: {stats['avg_turnaround_time_ms']:.2f}ms")
+    print(f"  [OK] Missions completed: {stats['completed_tasks']}")
+    print(f"  [OK] Avg Mission turnaround: {stats['avg_turnaround_time_ms']:.2f}ms")
     
     scheduler.stop()
     print()
-    print("[OK] Task scheduler tests passed")
+    print("[OK] Tactical task scheduler tests passed")

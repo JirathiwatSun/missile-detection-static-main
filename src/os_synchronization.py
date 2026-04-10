@@ -385,38 +385,38 @@ if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     
-    print("=== OS SYNCHRONIZATION DEMO ===")
+    print("=== TACTICAL OS SYNCHRONIZATION DEMO ===")
     print()
 
     # 1. Test Mutex
-    print("Test 1: Mutex Lock/Unlock")
-    mutex = Mutex("test_mutex", track_stats=True)
+    print("Test 1: Interceptor Fire Lock (Mutex)")
+    mutex = Mutex("interceptor_fire_lock", track_stats=True)
     wait_time = mutex.lock()
-    print(f"  [OK] Acquired mutex (wait: {wait_time:.2f}us)")
+    print(f"  [OK] Acquired fire lock (wait: {wait_time:.2f}us)")
     mutex.unlock()
-    print("  [OK] Released mutex")
+    print("  [OK] Released fire lock")
     print()
 
     # 2. Test Semaphore
-    print("Test 2: Semaphore (Counter=2)")
-    sem = Semaphore(2, "test_sem")
+    print("Test 2: Detector Thread Pool (Semaphore Counter=2)")
+    sem = Semaphore(2, "detector_thread_pool")
     sem.wait()
-    print("  [OK] Acquired slot 1")
+    print("  [OK] Occupied detector slot 1")
     sem.wait()
-    print("  [OK] Acquired slot 2")
+    print("  [OK] Occupied detector slot 2")
     sem.signal()
-    print("  [OK] Released slot")
+    print("  [OK] Released detector slot")
     print()
 
     # 3. Test Read-Write Lock
-    print("Test 3: RWLock (Multiple Readers)")
-    rw = RWLock("test_rw")
+    print("Test 3: Radar Data Access (RWLock - Multiple Readers)")
+    rw = RWLock("radar_data_access")
     rw.acquire_read()
     rw.acquire_read()
-    print("  [OK] Acquired two simultaneous readers")
+    print("  [OK] Multiple radar displays reading concurrently")
     rw.release_read()
     rw.release_read()
-    print("  [OK] Released readers")
+    print("  [OK] Released radar data access")
     print()
 
-    print("[OK] All synchronization tests passed")
+    print("[OK] All tactical synchronization tests passed")

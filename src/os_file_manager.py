@@ -432,38 +432,38 @@ if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     
-    print("=== OS FILE MANAGEMENT DEMO ===")
+    print("=== TACTICAL OS FILE MANAGEMENT DEMO ===")
     print()
 
     # Initialize file manager
-    fm = init_file_manager(data_dir="./demo_data")
-    print(f"[OK] Initialized file manager in ./demo_data")
+    fm = init_file_manager(data_dir="./os_demo_data")
+    print(f"[OK] Initialized tactical file manager in ./os_demo_data")
 
     # 1. Test File Creation & Writing
-    print("Test 1: Opening and Writing (Buffered)")
-    fd = fm.open("test_file.bin", mode=FileMode.WRITE, io_strategy=IOStrategy.BUFFERED)
+    print("Test 1: Opening and Writing Detection Logs (Buffered)")
+    fd = fm.open("missile_detections.log", mode=FileMode.WRITE, io_strategy=IOStrategy.BUFFERED)
     if fd is not None:
-        data = b"Hello from the OS File Manager! " * 10
+        data = b"[TACTICAL] Missile detected at (100, 200). Confidence: 0.98\n" * 10
         success = fm.write(fd, data)
-        print(f"  [OK] Wrote {len(data)} bytes to FD {fd}")
+        print(f"  [OK] Wrote {len(data)} bytes of telemetry to FD {fd}")
         
         # 2. Test fsync
-        print("Test 2: Data Durability (fsync)")
+        print("Test 2: Critical Data Durability (fsync)")
         fm.fsync(fd)
-        print("  [OK] Synchronized data to disk")
+        print("  [OK] Synchronized mission logs to disk")
         
         # 3. Test Checksum
-        print("Test 3: Data Integrity (Checksum)")
+        print("Test 3: Log Integrity (Checksum)")
         checksum = fm.compute_checksum(fd)
-        print(f"  [OK] SHA256: {checksum[:16]}...")
+        print(f"  [OK] SHA256 Integrity: {checksum[:16]}...")
         
         fm.close(fd)
-        print("  [OK] Closed file")
+        print("  [OK] Secured and closed mission file")
     
     print()
     stats = fm.get_global_stats()
-    print(f"  [OK] Total writes: {stats['total_writes']}")
-    print(f"  [OK] Avg fsync time: {stats['avg_fsync_time_us']:.2f}us")
+    print(f"  [OK] Total mission writes: {stats['total_writes']}")
+    print(f"  [OK] Avg disk sync time: {stats['avg_fsync_time_us']:.2f}us")
     
     print()
-    print("[OK] All file management tests passed")
+    print("[OK] All tactical file management tests passed")

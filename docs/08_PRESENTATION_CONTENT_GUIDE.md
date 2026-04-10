@@ -621,7 +621,7 @@ sys.path.insert(0, 'src')
 from os_synchronization import RWLock
 import time
 
-rwlock = RWLock('demo', track_stats=True)
+rwlock = RWLock('radar_data_access', track_stats=True)
 
 # Multiple readers
 print('Starting 100 concurrent readers...')
