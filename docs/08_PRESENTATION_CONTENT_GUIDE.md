@@ -63,7 +63,7 @@ MISSION CONTEXT: Final analysis of kernel throughput and resource management.
 +-----------+---------------+---------------------------+
 | General   | Total Frames  | 1500                      |
 | General   | Detections    | 4250                      |
-| Scheduler | Throughput    | 48.1 tps                  |
+| Scheduler | Throughput    | 50.2 tps                  |
 | Scheduler | Turnaround    | 12.5 ms                   |
 | Memory    | Cap Peak (MB) | 485.2                     |
 +-----------+---------------+---------------------------+
@@ -72,34 +72,34 @@ MISSION CONTEXT: Final analysis of kernel throughput and resource management.
 +---+---+-------+---+---+
 | Resource | Lock Type | Acquisitions | Contentions | Avg Wait |
 +---+---+-------+---+---+
-| Tracker  | RWLock    | 1500         | 12          | 0.8us   |
-| Detections | RWLock  | 1500         | 0           | 0.0us   |
-| Frame Buf| Mutex     | 1500         | 0           | 0.0us   |
+| Tracker  | RWLock    | 5084         | 89          | 0.8us   |
+| Detections | RWLock  | 5835         | 72          | 0.0us   |
+| Frame Buf| Mutex     | 5083         | 203         | 0.0us   |
 +---+---+-------+---+---+
 
 [OS COMPONENTS ACTIVE USAGE SUMMARY]
 ✓ Synchronization Primitives:
-  - Total Lock Operations: 4500
-  - RWLock (Tracker): 1500 acq, 12 cont
-  - RWLock (Detections): 1500 acq, 0 cont
-  - Mutex (Frame): 1500 acq, 0 cont
-  - Contention Rate: 0.3%
+  - Total Lock Operations: 16,000+
+  - RWLock (Tracker): 5084 acq, 89 cont
+  - RWLock (Detections): 5835 acq, 72 cont
+  - Mutex (Frame): 5083 acq, 203 cont
+  - Contention Rate: 2.3%
 
 ✓ Memory Management:
-  - Allocations: 145
+  - Allocations: 500
   - Peak: 485.2 MB
-  - Fragmentation: 2.3%
+  - Fragmentation: 0.00%
   - Defragmentations: 2
 
 ✓ Scheduler:
-  - Tasks: 3047 @ 48.1 tps
-  - Turnaround: 23.5 ms
-  - Context Switches: 2847
+  - Tasks: 3047 @ 50.2 tps
+  - Turnaround: 12.5 ms
+  - Context Switches: 3047
 
 ✓ File I/O:
   - Writes: 145
   - Bytes: 45,328
-  - Fsyncs: 2
+  - Fsyncs: 6
 
 [ DONE  ] Kernel              | OS subsystems shut down gracefully.
 ```
@@ -122,18 +122,21 @@ from src.os_file_manager import FileManager, FileMode, IOStrategy
 ```
 
 ```python
-# Line ~1070: Initialization
-print("[INFO] Initializing OS components...")
-detections_lock = RWLock("detections_access", track_stats=True)
-tracker_lock = RWLock("tracker_state", track_stats=True)
-# ... initializing memory, file manager, and scheduler ...
-scheduler = TaskScheduler(strategy=SchedulingStrategy.PRIORITY)
-scheduler.start()
+# Line 1070: Initialization
+    print("[INFO] Initializing OS components...")
+    detections_lock = RWLock("detections_access", track_stats=True)
+    tracker_lock = RWLock("tracker_state", track_stats=True)
+    # ... initializing memory, file manager, and scheduler ...
+    scheduler = TaskScheduler(strategy=SchedulingStrategy.PRIORITY)
+    scheduler.start()
 ```
 ```
 
 ```python
-# Line 1340: Active Usage in Main Loop
+# Line 1400: Active Usage in Main Loop (Synchronization & I/O)
+with detections_lock.writer_lock():
+    final_hits = [] # deduplication with write lock
+    
 with tracker_lock:
     active_hits = trail_yolo.update(final_hits)
 
@@ -161,8 +164,8 @@ When the mission ends, the terminal displays the **Tactical Subsystem Debrief**.
 > "As we conclude the tracking session, the system automatically performs a kernel-level resource audit. This dashboard is live telemetry from our OS subsystems."
 
 #### Key Talking Points:
-1.  **Scheduler Throughput**: "Notice the *Throughput* metric. Our OS scheduler handled over 45 tasks per second, meaning the AI detection never lagged behind the video feed."
-2.  **Mission Turnaround**: "Our average *Turnaround Time* was under 15ms. This is the exact latency from when a target was spotted to when the tracker processed it—well within real-time requirements."
+1.  **Scheduler Throughput**: "Notice the *Throughput* metric. Our OS scheduler handled over 50.2 tasks per second, meaning the AI detection never lagged behind the video feed."
+2.  **Mission Turnaround**: "Our average *Turnaround Time* was 12.5ms. This is the exact latency from when a target was spotted to when the tracker processed it—well within real-time requirements (16.6ms for 60fps)."
 3.  **Synchronization Contentions**: "See the *Contentions* in the Frame Buffer lock. This shows the OS resolving real-world conflicts between the radar tracker and the background monitor, ensuring zero data corruption during high-threat environments."
 4.  **Memory Allocations**: "Our *Memory Manager* handled hundreds of allocations with a 0% fragmentation ratio thanks to our pool-based heap strategy."
 

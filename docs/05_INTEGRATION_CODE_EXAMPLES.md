@@ -8,7 +8,7 @@ All code examples below are taken directly from the running missile tracker. **R
 - 4500+ lock acquisitions tracked
 - 3047 tasks scheduled and executed
 - 145 memory allocations monitored
-- Detailed OS summary printed at shutdown (see [OS_IMPLEMENTATION_ACTIVE_USAGE.md](../OS_IMPLEMENTATION_ACTIVE_USAGE.md))
+- Detailed OS summary printed at shutdown (see [OS_IMPLEMENTATION_ACTIVE_USAGE.md](./OS_IMPLEMENTATION_ACTIVE_USAGE.md))
 
 ---
 

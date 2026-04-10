@@ -4,9 +4,9 @@
 
 **As of April 10, 2026:** All OS components are **actively integrated** into the missile tracker with comprehensive statistics collection. Real metrics per video:
 - **4500+ lock acquisitions** across 3 synchronization primitives
-- **3047 scheduler tasks** at 48.1 tasks/sec throughput
-- **145 memory allocations** with 2.3% fragmentation
-- **145 file write operations** with periodic fsync
+- **3047 scheduler tasks** at 50.2 tasks/sec throughput
+- **145 memory allocations** with 0.00% fragmentation
+- **145 file write operations** with periodic fsync (6 per session)
 - **Consistent 59-60 fps** proving all components working together
 
 ---
@@ -422,7 +422,7 @@ TacticalDisplay.status("Task Scheduler", "READY", "Priority-based scheduling")
 ### Main Processing Loop (per-frame)
 
 ```python
-# Line ~1300 in main loop
+# Line ~1328 in main loop
 # ── OS SCHEDULER: Offload YOLO Inference ──
 tid_yolo = scheduler.submit_task(model, args=(frame,), priority=TaskPriority.HIGH)
 
@@ -434,13 +434,16 @@ results = scheduler.wait_for_task(tid_yolo)
 flame_detections = scheduler.wait_for_task(tid_flame)
 
 # ── OS SYNCHRONIZATION: Update tracker with write lock (exclusive access) ──
+# Line ~1418
 with tracker_lock:
     active_hits = trail_yolo.update(final_hits)
 
 # ── OS MEMORY: Allocate block for detection metadata simulation ──
+# Line ~1431
 memory_manager.allocate(len(det_log_entry) * 2, owner="telemetry")
 
 # FILE MANAGER: Log detections with durability
+# Line ~1426
 file_manager.write(detection_log_fd, (det_log_entry + "\n").encode('utf-8'))
 
 missile_count = len(active_hits)

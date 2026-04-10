@@ -8,7 +8,7 @@
 - **500 allocations, 0.00% fragmentation** = Memory pooling working
 - **Consistent 59-60 fps** = All components coordinating correctly
 
-See [PRESENTATION_QUICK_REFERENCE.md](../PRESENTATION_QUICK_REFERENCE.md) for what to show evaluators.
+See [PRESENTATION_QUICK_REFERENCE.md](./PRESENTATION_QUICK_REFERENCE.md) for what to show evaluators.
 
 ---
 **Industrial-Grade Real-time Video Processing & Aviation-Grade Tracking HUD (Iron Dome v3.1)**

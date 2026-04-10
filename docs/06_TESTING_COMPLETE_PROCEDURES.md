@@ -5,7 +5,7 @@
 > **Get Started:**
 > 1. Quick verification: `python demo_os_features.py` (3-5 min)
 > 2. Live tracker demo: `python -m src.missile_tracker --video sample.mp4` (see OS stats!)
-> 3. For presentation: Read [PRESENTATION_QUICK_REFERENCE.md](../PRESENTATION_QUICK_REFERENCE.md) first
+> 3. For presentation: Read [PRESENTATION_QUICK_REFERENCE.md](./PRESENTATION_QUICK_REFERENCE.md) first
 
 ---
 
@@ -59,11 +59,17 @@ ls
 src/
 docs/
 data/
+datasets/
+models/
+scripts/
 demo_os_features.py
-02_COMPONENTS_TECHNICAL_DEEP_DIVE.md
-IMPLEMENTATION_SUMMARY.md
-requirements.txt
 README.md
+requirements.txt
+config.cfg
+run.bat
+run.sh
+setup.bat
+setup.sh
 ...
 ```
 

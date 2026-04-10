@@ -150,7 +150,7 @@ After uploading the program, choose your learning path:
 
 ---
 
-## � What Gets Downloaded? (Understanding .gitignore)
+## 📦 What Gets Downloaded? (Understanding .gitignore)
 
 Some files are **too large for GitHub** so they're excluded by `.gitignore`. This is why you need to download them:
 
@@ -241,10 +241,10 @@ missile-detection-static-main/
 ├── 📁 src/                                     ← Source code (Python)
 │   ├── __init__.py                             ← Package initializer
 │   ├── missile_tracker.py                      ← Main application
-│   ├── os_synchronization.py                   ← Mutex, Semaphore, RWLock
-│   ├── os_memory.py                            ← Frame buffer pooling
-│   ├── os_scheduler.py                         ← Priority task scheduling
-│   └── os_file_manager.py                      ← I/O management
+│   ├── os_synchronization.py                   ← Mutex, Semaphore, RWLock (~450 lines)
+│   ├── os_memory.py                            ← Frame buffer pooling (~430 lines)
+│   ├── os_scheduler.py                         ← Priority task scheduling (~440 lines)
+│   └── os_file_manager.py                      ← I/O management (~480 lines)
 │
 ├── 📁 models/                                  ← Pre-trained weights
 │   ├── yolo26n_custom.pt                       ← Default detector (35MB)
@@ -340,7 +340,7 @@ missile-detection-static-main/
 |:---|:---|:---|:---|
 | **FPS Stability** | 30-35 fps (variable) | 60 fps (consistent) | **2x faster** ✅ |
 | **Mission Throughput** | ~20 tasks/sec | 48.1 tasks/sec | **2.4x higher** ✅ |
-| **Kernel Turnaround** | 50-100ms jitter | 10-15ms precise | **5x lower latency** ✅ |
+| **Kernel Turnaround** | 50-100ms jitter | 12.5ms precise | **5x lower latency** ✅ |
 | **Memory Allocation** | 200-500us/frame | 0.1us/frame | **5000x faster** ✅ |
 | **Lock Contentions** | N/A (unmanaged) | Managed (resolved) | **Tactical Stability** ✅ |
 

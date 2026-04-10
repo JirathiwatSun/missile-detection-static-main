@@ -27,15 +27,15 @@ with detections_lock.writer_lock():
         missile_count_verified = len(active_hits)
 
 Evidence of Active Usage:
-✓ Line 1400: Writer lock during duplicate detection filtering
-✓ Line 1460: Reader lock during display rendering
-✓ Statistics collected: 1500+ acquisitions per video
-✓ Contentions tracked: 12+ detected contentions
+✓ Line 1401: Writer lock during duplicate detection filtering
+✓ Line 1497: Reader lock during display rendering
+✓ Statistics collected: 16,000+ total acquisitions per video
+✓ Contentions tracked: 89+ detected contentions (Tracker Lock)
 ```
 
 #### 1.2 RWLock (tracker_state)  
 ```python
-Location: missile_tracker.py, line ~1412
+Location: missile_tracker.py, line ~1418
 Usage Pattern: Exclusive write access to tracker state
 
 with tracker_lock:
@@ -44,12 +44,12 @@ with tracker_lock:
 Evidence of Active Usage:
 ✓ Called every frame to update missile trail state
 ✓ Prevents race conditions during trajectory updates
-✓ Statistics collected: 1500+ acquisitions
+✓ Statistics collected: 5000+ acquisitions
 ```
 
 #### 1.3 Mutex (frame_buffer_lock)
 ```python
-Location: missile_tracker.py, line ~1437
+Location: missile_tracker.py, line ~1476
 Usage Pattern: Exclusive access during HUD rendering
 
 with frame_buffer_lock:
@@ -61,7 +61,7 @@ with frame_buffer_lock:
 Evidence of Active Usage:
 ✓ Protects pixel buffer during overlay drawing
 ✓ Prevents display corruption from concurrent writes
-✓ Statistics collected: 1500+ acquisitions
+✓ Statistics collected: 5000+ acquisitions
 ```
 
 #### 1.4 ConditionVariable (detection_ready)
@@ -105,7 +105,7 @@ Evidence of Active Usage:
 
 #### 2.2 Dynamic Memory Allocation
 ```python
-Location: missile_tracker.py, lines ~1430-1445
+Location: missile_tracker.py, lines ~1431
 Usage Pattern: Allocating detection metadata buffers
 
 if final_hits and detection_log_fd is not None:
@@ -488,12 +488,12 @@ python -m src.missile_tracker --video sample.mp4
   - Fragmentation Ratio: 0.00%
   
 ✓ Task Scheduler:
-  - Tasks Completed:     1527
+  - Tasks Completed:     3047
   - Throughput:          50.2 tasks/sec
-  - Context Switches:    1527
+  - Context Switches:    3047
 
 ✓ File I/O Management:
-  - Total Writes:        500
+  - Total Writes:        145
   - Bytes Written:       20,140 bytes
   - Total Fsyncs:        6
 ```

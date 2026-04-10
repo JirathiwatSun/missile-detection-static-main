@@ -6,8 +6,8 @@ This project now includes **4 major guides** to help you understand, test, and p
 
 | Guide | Purpose | Read Time | Location |
 |-------|---------|-----------|----------|
-| **PRESENTATION_QUICK_REFERENCE.md** | What to show evaluators ⭐ NEW | 10 min | [View Here](../PRESENTATION_QUICK_REFERENCE.md) |
-| **OS_IMPLEMENTATION_ACTIVE_USAGE.md** | Proof of active impl ⭐ NEW | 15 min | [View Here](../OS_IMPLEMENTATION_ACTIVE_USAGE.md) |
+| **PRESENTATION_QUICK_REFERENCE.md** | What to show evaluators ⭐ NEW | 10 min | [View Here](./PRESENTATION_QUICK_REFERENCE.md) |
+| **OS_IMPLEMENTATION_ACTIVE_USAGE.md** | Proof of active impl ⭐ NEW | 15 min | [View Here](./OS_IMPLEMENTATION_ACTIVE_USAGE.md) |
 | **06_TESTING_COMPLETE_PROCEDURES.md** | Step-by-step testing of all components | 20 min | [View Here](./06_TESTING_COMPLETE_PROCEDURES.md) |
 | **02_COMPONENTS_TECHNICAL_DEEP_DIVE.md** | How to use and integrate components | 15 min | [View Here](./02_COMPONENTS_TECHNICAL_DEEP_DIVE.md) |
 | **03_OS_IMPLEMENTATION_DETAILS.md** | Technical deep-dive | 30 min | [View Here](./03_OS_IMPLEMENTATION_DETAILS.md) |
@@ -56,7 +56,7 @@ Follow the sections:
 6. Run Integrated Demo
 
 #### **Prepare for Presentation** ⭐ START HERE
-→ Read: `PRESENTATION_QUICK_REFERENCE.md`
+→ Read: `./PRESENTATION_QUICK_REFERENCE.md`
 
 Includes:
 - **What to show evaluators** (startup → video → statistics)
@@ -148,7 +148,7 @@ python demo_os_features.py
 ## 📊 Component Overview
 
 ### 1. Synchronization Primitives
-**File:** `src/os_synchronization.py` (350 lines)
+**File:** `src/os_synchronization.py` (~450 lines)
 
 ```python
 from os_synchronization import Mutex, Semaphore, RWLock, ConditionVariable
@@ -169,7 +169,7 @@ rwlock.release_write()
 ---
 
 ### 2. Memory Management
-**File:** `src/os_memory.py` (400 lines)
+**File:** `src/os_memory.py` (~430 lines)
 
 ```python
 from os_memory import FrameBufferPool
@@ -192,7 +192,7 @@ pool.release(frame)         # Returns to pool
 ---
 
 ### 3. Task Scheduler
-**File:** `src/os_scheduler.py` (240 lines)
+**File:** `src/os_scheduler.py` (~440 lines)
 
 ```python
 from os_scheduler import init_global_scheduler, TaskPriority
@@ -214,7 +214,7 @@ scheduler.stop()
 ---
 
 ### 4. File Management
-**File:** `src/os_file_manager.py` (380 lines)
+**File:** `src/os_file_manager.py` (~480 lines)
 
 ```python
 from os_file_manager import FileManager, FileMode, IOStrategy
