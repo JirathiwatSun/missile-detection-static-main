@@ -19,6 +19,9 @@ models/*.pt
 # Media Outputs
 output_tracked.mp4
 screenshot_*.png
+demo_output.txt
+*.log
+.DS_Store
 
 # IDE Config
 .vscode/
