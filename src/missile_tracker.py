@@ -170,54 +170,6 @@ class TacticalDisplay:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Night Flame Detector
-# ─────────────────────────────────────────────────────────────────────────────
-
-class TacticalDisplay:
-    """Helper for rich mission-control terminal output"""
-    @staticmethod
-    def header():
-        banner = r"""
-    ======================================================================
-       _____ ____  ____  _   _   _____   ____  __  __ _____ 
-      |_   _|  _ \/ __ \| \ | | |  __ \ / __ \|  \/  |  ___|
-        | | | |_) | |  | |  \| | | |  | | |  | | \  / | |__  
-        | | |  _ <| |  | | . ` | | |  | | |  | | |\/| |  __| 
-       _| |_| | \ \ |__| | |\  | | |__| | |__| | |  | | |___ 
-      |_____|_|  \_\____/|_| \_| |_____/ \____/|_|  |_|_____|
-                                                             
-               OPERATING SYSTEM SUBSYSTEMS - VERSION 3.0
-    ======================================================================
-        """
-        print(banner)
-
-    @staticmethod
-    def section(title, subtitle=None):
-        print(f"\n[{title}]")
-        print("=" * 70)
-        if subtitle:
-            print(f"MISSION CONTEXT: {subtitle}")
-            print("-" * 70)
-
-    @staticmethod
-    def status(component, state, detail):
-        colors = {"READY": "\033[92m", "BUSY": "\033[93m", "SYNCED": "\033[96m", "DONE": "\033[92m", "FAIL": "\033[91m"}
-        reset = "\033[0m"
-        color = colors.get(state, "")
-        print(f"[{color}{state:^7}{reset}] {component:<25} {detail}")
-
-    @staticmethod
-    def table(headers, rows):
-        try:
-            from tabulate import tabulate
-            print(tabulate(rows, headers=headers, tablefmt="grid"))
-        except ImportError:
-            # Fallback for simple grid
-            col_widths = [max(len(str(row[i])) for row in [headers] + rows) for i in range(len(headers))]
-            fmt = " | ".join([f"{{:<{w}}}" for w in col_widths])
-            print(fmt.format(*headers))
-            print("-" * (sum(col_widths) + len(headers)*3))
-            for row in rows:
-                print(fmt.format(*[str(x) for x in row]))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Night Flame Detector
