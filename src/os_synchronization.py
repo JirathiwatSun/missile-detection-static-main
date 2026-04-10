@@ -269,6 +269,32 @@ class RWLock:
             self._write_ready.notify_all()
             self._read_ready.notify_all()
 
+    class _LockProxy:
+        def __init__(self, acquire, release):
+            self.acquire = acquire
+            self.release = release
+        def __enter__(self):
+            self.acquire()
+            return self
+        def __exit__(self, *args):
+            self.release()
+
+    def reader_lock(self):
+        """Returns a context manager for read access"""
+        return self._LockProxy(self.acquire_read, self.release_read)
+
+    def writer_lock(self):
+        """Returns a context manager for write access"""
+        return self._LockProxy(self.acquire_write, self.release_write)
+
+    def __enter__(self):
+        """Default to write lock for 'with' usage"""
+        self.acquire_write()
+        return self
+
+    def __exit__(self, *args):
+        self.release_write()
+
 
 class ConditionVariable:
     """

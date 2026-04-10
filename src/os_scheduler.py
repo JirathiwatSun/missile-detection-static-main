@@ -139,6 +139,7 @@ class TaskScheduler:
         
         self._lock = Mutex("scheduler_lock", track_stats=True)
         self._task_ready = ConditionVariable("task_ready")
+        self._task_completed = ConditionVariable("task_completed")
         self._workers_active = False
         self.worker_threads: List[threading.Thread] = []
         
@@ -260,6 +261,7 @@ class TaskScheduler:
                 del self.running_tasks[task.task_id]
                 self.completed_tasks.append(task)
                 self.global_stats['total_tasks_completed'] += 1
+                self._task_completed.broadcast()
     
     def start(self) -> None:
         """Start scheduler worker threads"""
@@ -277,6 +279,31 @@ class TaskScheduler:
                 self.worker_threads.append(thread)
             
             logger.info(f"Scheduler started with {self.max_workers} workers")
+
+    def wait_for_task(self, task_id: int, timeout_sec: float = 10.0) -> Optional[Any]:
+        """
+        Wait for a specific task to complete and return its result.
+        
+        System Call: Similar to waitpid() or join()
+        """
+        def is_done():
+            with self._lock:
+                # Check completed tasks
+                for t in self.completed_tasks:
+                    if t.task_id == task_id:
+                        return True
+                return False
+
+        if self._task_completed.wait(predicate=is_done, timeout_sec=timeout_sec):
+            with self._lock:
+                for t in self.completed_tasks:
+                    if t.task_id == task_id:
+                        if t.exception:
+                            raise t.exception
+                        return t.result
+        
+        logger.warning(f"Timeout waiting for task {task_id}")
+        return None
     
     def stop(self, timeout_sec: float = 5.0) -> None:
         """Stop scheduler and wait for tasks to complete"""

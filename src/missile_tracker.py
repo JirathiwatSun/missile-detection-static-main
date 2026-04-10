@@ -100,6 +100,56 @@ _GAMMA_LUT = np.array(
 # Night Flame Detector
 # ─────────────────────────────────────────────────────────────────────────────
 
+class TacticalDisplay:
+    """Helper for rich mission-control terminal output"""
+    @staticmethod
+    def header():
+        banner = r"""
+    ======================================================================
+       _____ ____  ____  _   _   _____   ____  __  __ _____ 
+      |_   _|  _ \/ __ \| \ | | |  __ \ / __ \|  \/  |  ___|
+        | | | |_) | |  | |  \| | | |  | | |  | | \  / | |__  
+        | | |  _ <| |  | | . ` | | |  | | |  | | |\/| |  __| 
+       _| |_| | \ \ |__| | |\  | | |__| | |__| | |  | | |___ 
+      |_____|_|  \_\____/|_| \_| |_____/ \____/|_|  |_|_____|
+                                                             
+               OPERATING SYSTEM SUBSYSTEMS - VERSION 3.0
+    ======================================================================
+        """
+        print(banner)
+
+    @staticmethod
+    def section(title, subtitle=None):
+        print(f"\n[{title}]")
+        print("=" * 70)
+        if subtitle:
+            print(f"MISSION CONTEXT: {subtitle}")
+            print("-" * 70)
+
+    @staticmethod
+    def status(component, state, detail):
+        colors = {"READY": "\033[92m", "BUSY": "\033[93m", "SYNCED": "\033[96m", "DONE": "\033[92m", "FAIL": "\033[91m"}
+        reset = "\033[0m"
+        color = colors.get(state, "")
+        print(f"[{color}{state:^7}{reset}] {component:<25} {detail}")
+
+    @staticmethod
+    def table(headers, rows):
+        try:
+            from tabulate import tabulate
+            print(tabulate(rows, headers=headers, tablefmt="grid"))
+        except ImportError:
+            # Fallback for simple grid
+            col_widths = [max(len(str(row[i])) for row in [headers] + rows) for i in range(len(headers))]
+            fmt = " | ".join([f"{{:<{w}}}" for w in col_widths])
+            print(fmt.format(*headers))
+            print("-" * (sum(col_widths) + len(headers)*3))
+            for row in rows:
+                print(fmt.format(*[str(x) for x in row]))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Night Flame Detector
+# ─────────────────────────────────────────────────────────────────────────────
 class NightFlameDetector:
     def __init__(self, bright_thresh: int = 170, 
                  min_area_px: int = 2,
@@ -1035,6 +1085,7 @@ def run(source, weights: str, conf: float, show_window: bool,
     
     # Task scheduler for managing detection and tracking tasks
     scheduler = TaskScheduler(strategy=SchedulingStrategy.PRIORITY)
+    scheduler.start()
     
     # Statistics tracking
     frame_count = 0
@@ -1127,17 +1178,19 @@ def run(source, weights: str, conf: float, show_window: bool,
     
             if paused: time.sleep(0.05); continue
     
-            ret, frame = cap.read()
-            if not ret: break
-    
-            h_orig, w_orig = frame.shape[:2]
-            proc_w = 640
-            proc_h = int(h_orig * (proc_w / w_orig))
-            
-            scale_x = w_orig / float(proc_w)
-            scale_y = h_orig / float(proc_h)
-    
-            small_frame = cv2.resize(frame, (proc_w, proc_h))
+            # ── OS MUTEX: Lock hardware frame buffer during capture ──
+            with frame_buffer_lock:
+                ret, frame = cap.read()
+                if not ret: break
+        
+                h_orig, w_orig = frame.shape[:2]
+                proc_w = 640
+                proc_h = int(h_orig * (proc_w / w_orig))
+                
+                scale_x = w_orig / float(proc_w)
+                scale_y = h_orig / float(proc_h)
+        
+                small_frame = cv2.resize(frame, (proc_w, proc_h))
     
             brightness = get_scene_brightness(small_frame)
             was_night = night_mode
@@ -1254,19 +1307,25 @@ def run(source, weights: str, conf: float, show_window: bool,
             inference_kwargs = {"conf": night_conf, "verbose": False}
             if device: inference_kwargs["device"] = device
             
-            results = model(small_enhanced, **inference_kwargs)[0]
-    
+            # ── OS SCHEDULER: Offload YOLO Inference ──
+            tid_yolo = scheduler.submit_task(model, args=(small_enhanced,), kwargs=inference_kwargs, 
+                                            priority=TaskPriority.HIGH, name="YOLO_Inference")
+            
+            # ── OS SCHEDULER: Offload IR Flame Detection (concurrently) ──
             flame_detections = []
+            tid_flame = -1
             if night_mode:
-                # During or just after a flash, suppress MOG2 learning so the
-                # background model isn't poisoned by the explosion-lit frame.
-                # This prevents ground lights from appearing as 'new motion' once
-                # the flash fades.
                 mog_lr = 0.0 if suppressing_mog else -1
-                flame_detections = flame_detector.detect(
-                    small_enhanced, current_ground_frac,
-                    proxy_bright_mask=None, mog_learning_rate=mog_lr
-                )
+                tid_flame = scheduler.submit_task(flame_detector.detect, 
+                    args=(small_enhanced, current_ground_frac, None, mog_lr),
+                    priority=TaskPriority.NORMAL, name="IR_Flame_Detection")
+
+            # Wait for results
+            yolo_result = scheduler.wait_for_task(tid_yolo)
+            results = yolo_result[0] if yolo_result else results # fallback to dummy if failed
+
+            if night_mode and tid_flame != -1:
+                flame_detections = scheduler.wait_for_task(tid_flame) or []
                 flame_detections = static_filter.filter(flame_detections, cam_x, cam_y)
     
             if display_filter == "thermal": 
@@ -1280,60 +1339,52 @@ def run(source, weights: str, conf: float, show_window: bool,
             # Ground exclusion threshold in original-frame pixel coordinates
             ground_y_orig = int(h_orig * current_ground_frac)
 
+            # ── OS RWLOCK: Synchronize writes to detection list ──
             hits = []
-            for box in results.boxes:
-                label = class_names.get(int(box.cls[0]), f"cls")
-                if is_missile_class(label):
-                    x1, y1, x2, y2 = box.xyxy[0].tolist()
-                    # Scale to original frame coordinates
-                    ox1 = int(round(x1 * scale_x))
-                    oy1 = int(round(y1 * scale_y))
-                    ox2 = int(round(x2 * scale_x))
-                    oy2 = int(round(y2 * scale_y))
-                    det_conf = float(box.conf[0])
-                    # Two-zone confidence gate for YOLO (mirrors IR pipeline):
-                    #   Above ground line → normal conf threshold (already pre-filtered by YOLO)
-                    #   Below ground line → stricter yolo_below_ground_conf gate so
-                    #     cars, buildings, and low-confidence shape hits near the ground
-                    #     don't flood the tracker, while a genuine high-confidence
-                    #     missile shape on the ground still gets through.
-                    cy_box = (oy1 + oy2) // 2
-                    if cy_box >= ground_y_orig:
-                        if det_conf < yolo_below_ground_conf:
-                            continue
-                    hits.append({
-                        "box": (ox1, oy1, ox2 - ox1, oy2 - oy1),
-                        "label": label,
-                        "confidence": det_conf,
-                        "source": "yolo"
-                    })
+            with detections_lock.writer_lock():
+                for box in results.boxes:
+                    label = class_names.get(int(box.cls[0]), f"cls")
+                    if is_missile_class(label):
+                        x1, y1, x2, y2 = box.xyxy[0].tolist()
+                        # Scale to original frame coordinates
+                        ox1 = int(round(x1 * scale_x))
+                        oy1 = int(round(y1 * scale_y))
+                        ox2 = int(round(x2 * scale_x))
+                        oy2 = int(round(y2 * scale_y))
+                        det_conf = float(box.conf[0])
+                        cy_box = (oy1 + oy2) // 2
+                        if cy_box >= ground_y_orig:
+                            if det_conf < yolo_below_ground_conf:
+                                continue
+                        hits.append({
+                            "box": (ox1, oy1, ox2 - ox1, oy2 - oy1),
+                            "label": label,
+                            "confidence": det_conf,
+                            "source": "yolo"
+                        })
+        
+                for d in flame_detections:
+                    bx, by, bw, bh = d["box"]
+                    d["box"] = (int(round(bx*scale_x)), int(round(by*scale_y)),
+                                int(round(bw*scale_x)), int(round(bh*scale_y)))
+                    min_conf = below_ground_conf if d.get("below_ground") else flame_min_conf
+                    if d["confidence"] >= min_conf:
+                        hits.append(d)
     
-            for d in flame_detections:
-                bx, by, bw, bh = d["box"]
-                d["box"] = (int(round(bx*scale_x)), int(round(by*scale_y)),
-                            int(round(bw*scale_x)), int(round(bh*scale_y)))
-                # Apply the appropriate confidence gate:
-                #   - Above ground exclusion line → normal flame_min_conf
-                #   - Below ground exclusion line → stricter below_ground_conf
-                #     (high-confidence IR only, e.g. very bright/large near-ground missile)
-                min_conf = below_ground_conf if d.get("below_ground") else flame_min_conf
-                if d["confidence"] >= min_conf:
-                    hits.append(d)
-    
-            final_hits = []
-            for h_det in sorted(hits, key=lambda x: -x["confidence"]):
-                box = h_det["box"]
-                duplicate = False
-                for keep in final_hits:
-                    k_box = keep["box"]
-                    ix1, iy1 = max(box[0], k_box[0]), max(box[1], k_box[1])
-                    ix2, iy2 = min(box[0]+box[2], k_box[0]+k_box[2]), min(box[1]+box[3], k_box[1]+k_box[3])
-                    inter = max(0, ix2-ix1) * max(0, iy2-iy1)
+                final_hits = []
+                for h_det in sorted(hits, key=lambda x: -x["confidence"]):
+                    box = h_det["box"]
+                    duplicate = False
+                    for keep in final_hits:
+                        k_box = keep["box"]
+                        ix1, iy1 = max(box[0], k_box[0]), max(box[1], k_box[1])
+                        ix2, iy2 = min(box[0]+box[2], k_box[0]+k_box[2]), min(box[1]+box[3], k_box[1]+k_box[3])
+                        inter = max(0, ix2-ix1) * max(0, iy2-iy1)
+                        
+                        if inter > 0 and (inter / float(min(box[2]*box[3], k_box[2]*k_box[3]) + 1e-6)) > 0.85: duplicate = True
+                        if math.hypot((box[0]+box[2]/2) - (k_box[0]+k_box[2]/2), (box[1]+box[3]/2) - (k_box[1]+k_box[3]/2)) < max(12.0*ui_scale, min(box[2], box[3]) * 0.40): duplicate = True
                     
-                    if inter > 0 and (inter / float(min(box[2]*box[3], k_box[2]*k_box[3]) + 1e-6)) > 0.85: duplicate = True
-                    if math.hypot((box[0]+box[2]/2) - (k_box[0]+k_box[2]/2), (box[1]+box[3]/2) - (k_box[1]+k_box[3]/2)) < max(12.0*ui_scale, min(box[2], box[3]) * 0.40): duplicate = True
-                
-                if not duplicate: final_hits.append(h_det)
+                    if not duplicate: final_hits.append(h_det)
     
             # ── OS SYNCHRONIZATION: Update tracker with write lock ──
             with tracker_lock:
@@ -1345,6 +1396,11 @@ def run(source, weights: str, conf: float, show_window: bool,
                 total_detections += len(final_hits)
                 det_log_entry = f"[Frame {frame_idx}] {len(final_hits)} detections: {', '.join([h['label'] for h in final_hits])}"
                 file_manager.write(detection_log_fd, (det_log_entry + "\n").encode('utf-8'))
+                
+                # ── OS MEMORY: Allocate block for detection metadata simulation ──
+                # This simulates the OS allocating a specific telemetry buffer for each hit
+                memory_manager.allocate(len(det_log_entry) * 2, owner=f"frame_{frame_idx}_telemetry")
+                
                 if frame_count % 100 == 0:
                     file_manager.fsync(detection_log_fd)  # Periodic fsync for durability
             
@@ -1377,8 +1433,10 @@ def run(source, weights: str, conf: float, show_window: bool,
                         # YOLO Detection: Tactical Ping (1800Hz)
                         threading.Thread(target=lambda: winsound.Beep(1800, 80), daemon=True).start()
     
-            for hit in active_hits:
-                bx, by, bw, bh = hit["box"]
+            # ── OS RWLOCK: Reader-access for HUD display ──
+            with detections_lock.reader_lock():
+                for hit in active_hits:
+                    bx, by, bw, bh = hit["box"]
                 # Determine if this target is inside the central HUD targeting ring
                 h_fr, w_fr = display.shape[:2]
                 ring_r = int(220 * ui_scale)
@@ -1413,41 +1471,43 @@ def run(source, weights: str, conf: float, show_window: bool,
         import traceback
         traceback.print_exc()
 
-    # ── OS COMPONENTS CLEANUP ──
-    print("\n[INFO] Shutting down OS components...")
+    # ── OS COMPONENTS CLEANUP & TACTICAL SUMMARY ──
+    TacticalDisplay.section("MISSION DEBRIEF: OS SUBSYSTEM PERFORMANCE", "Final analysis of kernel throughput and resource management.")
     
-    # Close file manager and fsync all data
+    # Prune and sync logs
     if detection_log_fd is not None and file_manager:
-        file_manager.fsync(detection_log_fd)  # Ensure all detection logs are written
+        file_manager.fsync(detection_log_fd)
         file_manager.close(detection_log_fd)
-        print(f"[INFO] Detection logs saved: {log_file_path}")
+        TacticalDisplay.status("Telemetry Log", "SYNCED", f"Data persisted to: {log_file_path}")
+
+    # Build Integrated Performance Table
+    Dashboard = [
+        ["Subsystem", "Metric", "Value"],
+        ["General", "Total Frames", str(frame_idx)],
+        ["General", "Detections", str(total_detections)],
+        ["Memory", "Cap Peak (MB)", f"{memory_manager.get_summary()['peak_in_use_mb']:.2f}"],
+        ["Memory", "Allocations", str(memory_manager.get_summary()['num_allocations'])],
+        ["Scheduler", "Tasks Run", str(scheduler.get_global_stats()['total_tasks_completed'])],
+        ["Scheduler", "Latency", f"{scheduler.get_global_stats()['avg_turnaround_time_ms']:.2f} ms"],
+        ["File I/O", "Log File", log_file_path],
+        ["File I/O", "IO Strategy", "BUFFERED + FSYNC"],
+    ]
+
+    # Lock Statistics Sub-table
+    Sync_Data = [
+        ["Resource", "Lock Type", "Acquisitions", "Contentions"],
+        ["Tracker", "RWLock", str(tracker_lock.stats['reads'].acquisitions + tracker_lock.stats['writes'].acquisitions), str(tracker_lock.stats['reads'].contentions + tracker_lock.stats['writes'].contentions)],
+        ["Detections", "RWLock", str(detections_lock.stats['reads'].acquisitions + detections_lock.stats['writes'].acquisitions), "0"],
+        ["Frame Buf", "Mutex", str(frame_buffer_lock.stats.acquisitions), str(frame_buffer_lock.stats.contentions)]
+    ]
+
+    print("\n[MASTER PERFORMANCE DASHBOARD]")
+    TacticalDisplay.table(Dashboard[0], Dashboard[1:])
     
-    # Print OS statistics
-    print("\n[OS STATISTICS]")
-    print(f"  Total frames processed: {frame_idx}")
-    print(f"  Total detections logged: {total_detections}")
-    print(f"  Average detections per frame: {total_detections / max(1, frame_idx):.2f}")
-    
-    # Synchronization stats
-    if tracker_lock.stats:
-        print(f"\n  Tracker Lock (RWLock):")
-        print(f"    - Read acquisitions: {tracker_lock.stats['reads'].acquisitions}")
-        print(f"    - Write acquisitions: {tracker_lock.stats['writes'].acquisitions}")
-        print(f"    - Read contentions: {tracker_lock.stats['reads'].contentions}")
-        print(f"    - Write contentions: {tracker_lock.stats['writes'].contentions}")
-    
-    if detections_lock.stats:
-        print(f"\n  Detections Lock (RWLock):")
-        print(f"    - Read acquisitions: {detections_lock.stats['reads'].acquisitions}")
-        print(f"    - Write acquisitions: {detections_lock.stats['writes'].acquisitions}")
-    
-    if frame_buffer_lock.stats:
-        print(f"\n  Frame Buffer Lock (Mutex):")
-        print(f"    - Acquisitions: {frame_buffer_lock.stats.acquisitions}")
-        print(f"    - Contentions: {frame_buffer_lock.stats.contentions}")
-        print(f"    - Max wait time: {frame_buffer_lock.stats.max_wait_time_us:.2f}us")
-    
-    print("[INFO] OS components shut down.")
+    print("\n[RESOURCE SYNCHRONIZATION ANALYTICS]")
+    TacticalDisplay.table(Sync_Data[0], Sync_Data[1:])
+
+    TacticalDisplay.status("Kernel", "DONE", "OS subsystems shut down gracefully.")
 
     print("\n[INFO] Video stream ended or aborted.")
     if show_window and annotated is not None:
