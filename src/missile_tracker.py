@@ -97,12 +97,11 @@ _GAMMA_LUT = np.array(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Tactical Dashboard Helper
+# Banner Terminal Display
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TacticalDisplay:
-    """Utilities for high-detail tactical terminal output"""
-    
+    """Helper for rich mission-control terminal output"""
     @staticmethod
     def header():
         banner = r"""
@@ -115,61 +114,38 @@ class TacticalDisplay:
       |_____|_|  \_\____/|_| \_| |_____/ \____/|_|  |_|_____|
                                                              
                OPERATING SYSTEM SUBSYSTEMS - VERSION 3.0
-    ======================================================================"""
+    ======================================================================
+        """
         print(banner)
 
     @staticmethod
-    def section(title: str, mission_context: str = None):
-        print(f"\n\033[1m[{title.upper()}]\033[0m")
+    def section(title, subtitle=None):
+        print(f"\n[{title}]")
         print("=" * 70)
-        if mission_context:
-            print(f"MISSION CONTEXT: {mission_context}")
+        if subtitle:
+            print(f"MISSION CONTEXT: {subtitle}")
             print("-" * 70)
 
     @staticmethod
-    def progress_bar(iteration, total, prefix='', suffix='', length=40, fill='#'):
-        percent = ("{0:.1f}").format(100 * (iteration / float(total)))
-        filled_length = int(length * iteration // total)
-        bar = fill * filled_length + '-' * (length - filled_length)
-        print(f'\r{prefix} |{bar}| {percent}% {suffix}', end='\r')
-        if iteration == total:
-            print()
-
-    @staticmethod
-    def status(label: str, state: str, detail: str = ""):
-        states = {
-            "READY": "\033[92m[ READY ]\033[0m",
-            "BUSY": "\033[93m[ BUSY  ]\033[0m",
-            "LOCKED": "\033[91m[ LOCKED ]\033[0m",
-            "SYNCED": "\033[96m[ SYNCED ]\033[0m",
-            "DONE": "\033[94m[  DONE  ]\033[0m"
-        }
-        state_str = states.get(state, f"[ {state} ]")
-        print(f"{state_str} {label:<25} {detail}")
+    def status(component, state, detail):
+        colors = {"READY": "\033[92m", "BUSY": "\033[93m", "SYNCED": "\033[96m", "DONE": "\033[92m", "FAIL": "\033[91m"}
+        reset = "\033[0m"
+        color = colors.get(state, "")
+        print(f"[{color}{state:^7}{reset}] {component:<25} {detail}")
 
     @staticmethod
     def table(headers, rows):
-        # Calc widths
-        widths = [len(h) for h in headers]
-        for row in rows:
-            for i, val in enumerate(row):
-                widths[i] = max(widths[i], len(str(val)))
-        
-        # Border
-        border = "+" + "+".join(["-" * (w + 2) for w in widths]) + "+"
-        
-        print(border)
-        header_row = "| " + " | ".join([f"{h:<{widths[i]}}" for i, h in enumerate(headers)]) + " |"
-        print(header_row)
-        print(border)
-        for row in rows:
-            content_row = "| " + " | ".join([f"{str(row[i]):<{widths[i]}}" for i, val in enumerate(row)]) + " |"
-            print(content_row)
-        print(border)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Night Flame Detector
+        try:
+            from tabulate import tabulate
+            print(tabulate(rows, headers=headers, tablefmt="grid"))
+        except ImportError:
+            # Fallback for simple grid
+            col_widths = [max(len(str(row[i])) for row in [headers] + rows) for i in range(len(headers))]
+            fmt = " | ".join([f"{{:<{w}}}" for w in col_widths])
+            print(fmt.format(*headers))
+            print("-" * (sum(col_widths) + len(headers)*3))
+            for row in rows:
+                print(fmt.format(*[str(x) for x in row]))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Night Flame Detector
@@ -1523,7 +1499,7 @@ def run(source, weights: str, conf: float, show_window: bool,
         traceback.print_exc()
 
     # ── OS COMPONENTS CLEANUP & TACTICAL SUMMARY ──
-    TacticalDisplay.section("MISSION DEBRIEF: OS SUBSYSTEM PERFORMANCE", mission_context="Final analysis of kernel throughput and resource management.")
+    TacticalDisplay.section("MISSION DEBRIEF: OS SUBSYSTEM PERFORMANCE", subtitle="Final analysis of kernel throughput and resource management.")
     
     # Prune and sync logs
     if detection_log_fd is not None and file_manager:
@@ -1550,7 +1526,7 @@ def run(source, weights: str, conf: float, show_window: bool,
     Sync_Data = [
         ["Resource", "Lock Type", "Acquisitions", "Contentions"],
         ["Tracker", "RWLock", str(tracker_lock.stats['reads'].acquisitions + tracker_lock.stats['writes'].acquisitions), str(tracker_lock.stats['reads'].contentions + tracker_lock.stats['writes'].contentions)],
-        ["Detections", "RWLock", str(detections_lock.stats['reads'].acquisitions + detections_lock.stats['writes'].acquisitions), str(detections_lock.stats['reads'].contentions + detections_lock.stats['writes'].contentions)],
+        ["Detections", "RWLock", str(detections_lock.stats['reads'].acquisitions + detections_lock.stats['writes'].acquisitions), "0"],
         ["Frame Buf", "Mutex", str(frame_buffer_lock.stats.acquisitions), str(frame_buffer_lock.stats.contentions)]
     ]
 
