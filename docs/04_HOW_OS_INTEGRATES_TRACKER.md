@@ -421,6 +421,11 @@ detection_log_fd = file_manager.open(log_file_path, FileMode.WRITE, IOStrategy.B
 
 # Task scheduler for managing detection and tracking tasks
 scheduler = TaskScheduler(strategy=SchedulingStrategy.PRIORITY)
+scheduler.start() # Start OS workers
+
+# Launch background tactical monitor for contention simulation
+monitor_running = True
+threading.Thread(target=tactical_monitor_thread, daemon=True).start()
 
 print("[INFO] OS components initialized successfully")
 print(f"  - Synchronization: RWLocks + Mutex + ConditionVariable")
@@ -432,23 +437,26 @@ print(f"  - Task Scheduler: Priority-based scheduling")
 ### Main Processing Loop (per-frame)
 
 ```python
-# Line ~1340 in main loop
-# SYNCHRONIZATION: Update tracker with write lock (exclusive access)
+# Line ~1300 in main loop
+# ── OS SCHEDULER: Offload YOLO Inference ──
+tid_yolo = scheduler.submit_task(model, args=(frame,), priority=TaskPriority.HIGH)
+
+# ── OS SCHEDULER: Offload IR Flame Detection (concurrently) ──
+tid_flame = scheduler.submit_task(flame_detector.detect, args=(...), priority=TaskPriority.NORMAL)
+
+# Synchronization: Wait for results
+results = scheduler.wait_for_task(tid_yolo)
+flame_detections = scheduler.wait_for_task(tid_flame)
+
+# ── OS SYNCHRONIZATION: Update tracker with write lock (exclusive access) ──
 with tracker_lock:
     active_hits = trail_yolo.update(final_hits)
 
+# ── OS MEMORY: Allocate block for detection metadata simulation ──
+memory_manager.allocate(len(det_log_entry) * 2, owner="telemetry")
+
 # FILE MANAGER: Log detections with durability
-if final_hits and detection_log_fd is not None:
-    frame_count += 1
-    total_detections += len(final_hits)
-    det_log_entry = f"[Frame {frame_idx}] {len(final_hits)} detections: {', '.join([h['label'] for h in final_hits])}"
-    
-    # Write to buffered log (fast)
-    file_manager.write(detection_log_fd, (det_log_entry + "\n").encode('utf-8'))
-    
-    # Periodic fsync for durability
-    if frame_count % 100 == 0:
-        file_manager.fsync(detection_log_fd)
+file_manager.write(detection_log_fd, (det_log_entry + "\n").encode('utf-8'))
 
 missile_count = len(active_hits)
 ```

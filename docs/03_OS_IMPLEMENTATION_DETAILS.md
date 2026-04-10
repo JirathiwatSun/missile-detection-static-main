@@ -75,7 +75,16 @@ frame_lock.release_read()
 frame_lock.acquire_write()
 update_frame_with_detections(frame, detections)
 frame_lock.release_write()
+
+# Context Manager (Modern Syntax)
+with frame_lock.writer_lock():
+    update_frame_with_detections(frame, detections)
 ```
+
+**Context Manager Benefits:**
+- ✅ **Automatic Release**: Ensures locks are released even if an exception occurs.
+- ✅ **Simplified Syntax**: Cleaner `with` statement instead of manual acquire/release.
+- ✅ **Default Mode**: `with frame_lock:` defaults to exclusive write for safety.
 
 #### Condition Variables
 - **System Calls Equivalent**: `pthread_cond_wait()`, `pthread_cond_signal()`
@@ -228,7 +237,15 @@ task_id = scheduler.submit_task(
 stats = scheduler.get_global_stats()
 print(f"Context switches: {stats['context_switches']}")
 print(f"Avg turnaround: {stats['avg_turnaround_time_ms']:.2f}ms")
+
+# Wait for a specific mission/task
+result = scheduler.wait_for_task(task_id, timeout_sec=5.0)
 ```
+
+#### Wait for Task (System Call)
+- **System Call Equivalent**: `waitpid()`, `pthread_join()`
+- **Use Case**: Synchronizing the main loop with background detection workers.
+- **Implementation**: Uses a `ConditionVariable` to block the calling thread until the specific Task ID is moved to the `TERMINATED` state.
 
 **Context Switching Overhead:**
 ```
