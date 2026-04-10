@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 import threading
 import gc
-from os_synchronization import Mutex, RWLock
+from src.os_synchronization import Mutex, RWLock
 import logging
 
 logger = logging.getLogger(__name__)

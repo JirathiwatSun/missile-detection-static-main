@@ -18,21 +18,18 @@ import os
 import time
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
-from os_synchronization import (
+from src.os_synchronization import (
     Mutex, Semaphore, RWLock, ConditionVariable
 )
-from os_memory import (
+from src.os_memory import (
     MemoryManager, AllocationStrategy, FrameBufferPool,
     init_memory_manager
 )
-from os_scheduler import (
+from src.os_scheduler import (
     TaskScheduler, SchedulingStrategy, TaskPriority,
     init_global_scheduler
 )
-from os_file_manager import (
+from src.os_file_manager import (
     FileManager, FileMode, IOStrategy,
     init_file_manager
 )

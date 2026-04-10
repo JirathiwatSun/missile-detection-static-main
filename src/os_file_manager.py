@@ -29,7 +29,7 @@ import time
 import threading
 import hashlib
 from pathlib import Path
-from os_synchronization import Mutex, RWLock
+from src.os_synchronization import Mutex, RWLock
 import logging
 
 logger = logging.getLogger(__name__)

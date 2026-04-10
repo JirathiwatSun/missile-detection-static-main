@@ -30,7 +30,7 @@ from enum import Enum
 from collections import deque
 import time
 import threading
-from os_synchronization import Mutex, ConditionVariable
+from src.os_synchronization import Mutex, ConditionVariable
 import logging
 
 logger = logging.getLogger(__name__)
