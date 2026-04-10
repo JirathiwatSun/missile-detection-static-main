@@ -97,6 +97,78 @@ _GAMMA_LUT = np.array(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Tactical Dashboard Helper
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TacticalDisplay:
+    """Utilities for high-detail tactical terminal output"""
+    
+    @staticmethod
+    def header():
+        banner = r"""
+    ======================================================================
+       _____ ____  ____   _   _   _____   ____  __  __ _____ 
+      |_   _|  _  \/ __ \| \ | | |  __ \ / __ \|  \/  |  ___|
+        | | | |_) | |  | |  \| | | |  | | |  | | \  / | |__  
+        | | |  _ <| |  | | . ` | | |  | | |  | | |\/| |  __| 
+       _| |_| | \ \ |__| | |\  | | |__| | |__| | |  | | |___ 
+      |_____|_|  \_\____/|_| \_| |_____/ \____/|_|  |_|_____|
+                                                             
+               OPERATING SYSTEM SUBSYSTEMS - VERSION 3.0
+    ======================================================================"""
+        print(banner)
+
+    @staticmethod
+    def section(title: str, mission_context: str = None):
+        print(f"\n\033[1m[{title.upper()}]\033[0m")
+        print("=" * 70)
+        if mission_context:
+            print(f"MISSION CONTEXT: {mission_context}")
+            print("-" * 70)
+
+    @staticmethod
+    def progress_bar(iteration, total, prefix='', suffix='', length=40, fill='#'):
+        percent = ("{0:.1f}").format(100 * (iteration / float(total)))
+        filled_length = int(length * iteration // total)
+        bar = fill * filled_length + '-' * (length - filled_length)
+        print(f'\r{prefix} |{bar}| {percent}% {suffix}', end='\r')
+        if iteration == total:
+            print()
+
+    @staticmethod
+    def status(label: str, state: str, detail: str = ""):
+        states = {
+            "READY": "\033[92m[ READY ]\033[0m",
+            "BUSY": "\033[93m[ BUSY  ]\033[0m",
+            "LOCKED": "\033[91m[ LOCKED ]\033[0m",
+            "SYNCED": "\033[96m[ SYNCED ]\033[0m",
+            "DONE": "\033[94m[  DONE  ]\033[0m"
+        }
+        state_str = states.get(state, f"[ {state} ]")
+        print(f"{state_str} {label:<25} {detail}")
+
+    @staticmethod
+    def table(headers, rows):
+        # Calc widths
+        widths = [len(h) for h in headers]
+        for row in rows:
+            for i, val in enumerate(row):
+                widths[i] = max(widths[i], len(str(val)))
+        
+        # Border
+        border = "+" + "+".join(["-" * (w + 2) for w in widths]) + "+"
+        
+        print(border)
+        header_row = "| " + " | ".join([f"{h:<{widths[i]}}" for i, h in enumerate(headers)]) + " |"
+        print(header_row)
+        print(border)
+        for row in rows:
+            content_row = "| " + " | ".join([f"{str(row[i]):<{widths[i]}}" for i, val in enumerate(row)]) + " |"
+            print(content_row)
+        print(border)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Night Flame Detector
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -998,6 +1070,8 @@ def run(source, weights: str, conf: float, show_window: bool,
     try: from ultralytics import YOLO
     except ImportError: sys.exit("[ERROR] ultralytics not installed.")
 
+    TacticalDisplay.header()
+
     print(f"[INFO] Loading YOLO model: {weights} ...", end=" ", flush=True)
     model = YOLO(weights)
     if device:
@@ -1106,11 +1180,11 @@ def run(source, weights: str, conf: float, show_window: bool,
     mon_thread = threading.Thread(target=tactical_monitor, daemon=True, name="TacticalMonitor")
     mon_thread.start()
     
-    print("[INFO] OS components initialized successfully")
-    print(f"  - Synchronization: RWLocks + Mutex + ConditionVariable")
-    print(f"  - Memory: Pool allocator (500MB max)")
-    print(f"  - File Manager: Detection logs -> {log_file_path}")
-    print(f"  - Task Scheduler: Priority-based scheduling")
+    TacticalDisplay.status("Kernel", "READY", "OS subsystems initialized successfully")
+    TacticalDisplay.status("Synchronization", "READY", "RWLocks + Mutex + ConditionVariable")
+    TacticalDisplay.status("Memory", "READY", "Pool allocator (500MB max)")
+    TacticalDisplay.status("File Manager", "READY", f"Detection logs -> {log_file_path}")
+    TacticalDisplay.status("Task Scheduler", "READY", "Priority-based scheduling")
 
     frame_idx, fps = 0, 0.0
     paused = False
@@ -1497,7 +1571,7 @@ def run(source, weights: str, conf: float, show_window: bool,
         traceback.print_exc()
 
     # ── OS COMPONENTS CLEANUP & TACTICAL SUMMARY ──
-    TacticalDisplay.section("MISSION DEBRIEF: OS SUBSYSTEM PERFORMANCE", "Final analysis of kernel throughput and resource management.")
+    TacticalDisplay.section("MISSION DEBRIEF: OS SUBSYSTEM PERFORMANCE", mission_context="Final analysis of kernel throughput and resource management.")
     
     # Prune and sync logs
     if detection_log_fd is not None and file_manager:
@@ -1524,7 +1598,7 @@ def run(source, weights: str, conf: float, show_window: bool,
     Sync_Data = [
         ["Resource", "Lock Type", "Acquisitions", "Contentions"],
         ["Tracker", "RWLock", str(tracker_lock.stats['reads'].acquisitions + tracker_lock.stats['writes'].acquisitions), str(tracker_lock.stats['reads'].contentions + tracker_lock.stats['writes'].contentions)],
-        ["Detections", "RWLock", str(detections_lock.stats['reads'].acquisitions + detections_lock.stats['writes'].acquisitions), "0"],
+        ["Detections", "RWLock", str(detections_lock.stats['reads'].acquisitions + detections_lock.stats['writes'].acquisitions), str(detections_lock.stats['reads'].contentions + detections_lock.stats['writes'].contentions)],
         ["Frame Buf", "Mutex", str(frame_buffer_lock.stats.acquisitions), str(frame_buffer_lock.stats.contentions)]
     ]
 
@@ -1667,18 +1741,3 @@ if __name__ == "__main__":
         yolo_below_ground_conf   = args.yolo_below_ground_conf,
     )
                 
-@staticmethod
-    def header():
-        banner = r"""
-    ======================================================================
-       _____ ____  ____   _   _   _____   ____  __  __ _____ 
-      |_   _|  _  \/ __ \| \ | | |  __ \ / __ \|  \/  |  ___|
-        | | | |_) | |  | |  \| | | |  | | |  | | \  / | |__  
-        | | |  _ <| |  | | . ` | | |  | | |  | | |\/| |  __| 
-       _| |_| | \ \ |__| | |\  | | |__| | |__| | |  | | |___ 
-      |_____|_|  \_\____/|_| \_| |_____/ \____/|_|  |_|_____|
-                                                             
-               OPERATING SYSTEM SUBSYSTEMS - VERSION 3.0
-    ==============================================================  ========
-        """
-        print(banner)
