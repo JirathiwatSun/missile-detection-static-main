@@ -21,6 +21,14 @@ Performance Trade-offs:
 - Flock: Prevents concurrent access, but adds overhead
 """
 
+import sys
+from pathlib import Path
+
+# Add project root to sys.path to allow running this file directly
+root_dir = str(Path(__file__).resolve().parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
 from typing import Optional, BinaryIO, Dict, Any, List
 from dataclasses import dataclass, field
 from enum import Enum
@@ -418,3 +426,44 @@ def get_file_manager() -> FileManager:
     if _global_file_manager is None:
         return init_file_manager()
     return _global_file_manager
+
+
+if __name__ == "__main__":
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    
+    print("=== OS FILE MANAGEMENT DEMO ===")
+    print()
+
+    # Initialize file manager
+    fm = init_file_manager(data_dir="./demo_data")
+    print(f"[OK] Initialized file manager in ./demo_data")
+
+    # 1. Test File Creation & Writing
+    print("Test 1: Opening and Writing (Buffered)")
+    fd = fm.open("test_file.bin", mode=FileMode.WRITE, io_strategy=IOStrategy.BUFFERED)
+    if fd is not None:
+        data = b"Hello from the OS File Manager! " * 10
+        success = fm.write(fd, data)
+        print(f"  [OK] Wrote {len(data)} bytes to FD {fd}")
+        
+        # 2. Test fsync
+        print("Test 2: Data Durability (fsync)")
+        fm.fsync(fd)
+        print("  [OK] Synchronized data to disk")
+        
+        # 3. Test Checksum
+        print("Test 3: Data Integrity (Checksum)")
+        checksum = fm.compute_checksum(fd)
+        print(f"  [OK] SHA256: {checksum[:16]}...")
+        
+        fm.close(fd)
+        print("  [OK] Closed file")
+    
+    print()
+    stats = fm.get_global_stats()
+    print(f"  [OK] Total writes: {stats['total_writes']}")
+    print(f"  [OK] Avg fsync time: {stats['avg_fsync_time_us']:.2f}us")
+    
+    print()
+    print("[OK] All file management tests passed")

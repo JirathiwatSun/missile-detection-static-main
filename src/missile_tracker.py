@@ -17,6 +17,13 @@ import argparse
 import time
 import sys
 import os
+from pathlib import Path
+
+# Add project root to sys.path to allow running this file directly
+root_dir = str(Path(__file__).resolve().parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
 import io
 import math
 import collections

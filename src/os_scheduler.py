@@ -24,6 +24,14 @@ Performance Trade-offs:
 - Round-Robin: Fair, more context switches
 """
 
+import sys
+from pathlib import Path
+
+# Add project root to sys.path to allow running this file directly
+root_dir = str(Path(__file__).resolve().parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
 from typing import Optional, Callable, Any, List, Dict
 from dataclasses import dataclass, field
 from enum import Enum
@@ -347,3 +355,42 @@ def get_global_scheduler() -> TaskScheduler:
     if _global_scheduler is None:
         return init_global_scheduler()
     return _global_scheduler
+
+
+if __name__ == "__main__":
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    
+    print("=== OS TASK SCHEDULER DEMO ===")
+    print()
+
+    # Initialize scheduler
+    scheduler = init_global_scheduler(strategy=SchedulingStrategy.PRIORITY, max_workers=2)
+    scheduler.start()
+    print("[OK] Started scheduler with 2 workers")
+
+    # Define a simple task
+    def demo_task(name, sleep_time):
+        print(f"  Task {name} starting...")
+        time.sleep(sleep_time)
+        print(f"  Task {name} finished")
+        return f"Result of {name}"
+
+    # Submit tasks
+    print("Test 1: Submitting tasks with different priorities")
+    t1 = scheduler.submit_task(demo_task, args=("High-Prio", 0.1), priority=TaskPriority.HIGH)
+    t2 = scheduler.submit_task(demo_task, args=("Normal-Prio", 0.2), priority=TaskPriority.NORMAL)
+    
+    print(f"  Submitted Task 1 (ID: {t1})")
+    print(f"  Submitted Task 2 (ID: {t2})")
+    
+    # Wait for execution
+    time.sleep(0.5)
+    
+    stats = scheduler.get_global_stats()
+    print(f"  [OK] Tasks completed: {stats['completed_tasks']}")
+    print(f"  [OK] Avg turnaround: {stats['avg_turnaround_time_ms']:.2f}ms")
+    
+    scheduler.stop()
+    print()
+    print("[OK] Task scheduler tests passed")

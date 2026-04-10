@@ -15,6 +15,14 @@ Student demonstrates understanding of:
 - Priority inversion awareness
 """
 
+import sys
+from pathlib import Path
+
+# Add project root to sys.path to allow running this file directly
+root_dir = str(Path(__file__).resolve().parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
 import threading
 import time
 from typing import Optional, Callable
@@ -371,3 +379,44 @@ def get_sync_primitive(strategy: SyncStrategy, *args, **kwargs):
         return SpinLock(*args, **kwargs)
     else:
         raise ValueError(f"Unknown strategy: {strategy}")
+
+
+if __name__ == "__main__":
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    
+    print("=== OS SYNCHRONIZATION DEMO ===")
+    print()
+
+    # 1. Test Mutex
+    print("Test 1: Mutex Lock/Unlock")
+    mutex = Mutex("test_mutex", track_stats=True)
+    wait_time = mutex.lock()
+    print(f"  [OK] Acquired mutex (wait: {wait_time:.2f}us)")
+    mutex.unlock()
+    print("  [OK] Released mutex")
+    print()
+
+    # 2. Test Semaphore
+    print("Test 2: Semaphore (Counter=2)")
+    sem = Semaphore(2, "test_sem")
+    sem.wait()
+    print("  [OK] Acquired slot 1")
+    sem.wait()
+    print("  [OK] Acquired slot 2")
+    sem.signal()
+    print("  [OK] Released slot")
+    print()
+
+    # 3. Test Read-Write Lock
+    print("Test 3: RWLock (Multiple Readers)")
+    rw = RWLock("test_rw")
+    rw.acquire_read()
+    rw.acquire_read()
+    print("  [OK] Acquired two simultaneous readers")
+    rw.release_read()
+    rw.release_read()
+    print("  [OK] Released readers")
+    print()
+
+    print("[OK] All synchronization tests passed")

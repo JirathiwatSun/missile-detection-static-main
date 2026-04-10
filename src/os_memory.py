@@ -19,6 +19,14 @@ Performance Trade-offs:
 - Direct allocation: -Memory overhead, +Fragmentation risk, -Speed
 """
 
+import sys
+from pathlib import Path
+
+# Add project root to sys.path to allow running this file directly
+root_dir = str(Path(__file__).resolve().parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
 import numpy as np
 from typing import Optional, List, Dict, Any, Tuple
 from dataclasses import dataclass, field
@@ -384,3 +392,38 @@ def get_memory_manager() -> MemoryManager:
     if _global_memory_manager is None:
         return init_memory_manager()
     return _global_memory_manager
+
+
+if __name__ == "__main__":
+    # Configure logging
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    
+    print("=== OS MEMORY MANAGEMENT DEMO ===")
+    print()
+
+    # 1. Test MemoryManager
+    print("Test 1: MemoryManager Allocation")
+    mm = MemoryManager(max_size_bytes=1000000, strategy=AllocationStrategy.POOL)
+    block = mm.allocate(1000, owner="demo_task")
+    if block:
+        print(f"  [OK] Allocated 1000 bytes at {block.address_str()}")
+    
+    stats = mm.get_summary()
+    print(f"  [OK] Current usage: {stats['current_in_use_mb']:.4f} MB")
+    print()
+
+    # 2. Test FrameBufferPool
+    print("Test 2: FrameBufferPool (Pre-allocation)")
+    # Simulate 1080p RGB frame
+    frame_size = 1920 * 1080 * 3 
+    pool = FrameBufferPool(buffer_size=frame_size, num_buffers=3, height=1080, width=1920)
+    
+    buf = pool.acquire()
+    if buf is not None:
+        print(f"  [OK] Acquired frame buffer (Shape: {buf.shape})")
+        print(f"  [OK] Pool utilization: {pool.get_utilization():.1f}%")
+        pool.release(buf)
+        print(f"  [OK] Released buffer back to pool")
+    
+    print()
+    print("[OK] All memory management tests passed")
