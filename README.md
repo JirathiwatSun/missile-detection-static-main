@@ -182,7 +182,7 @@ missile-detection-static-main/
 
 ---
 
-## �📚 ## 📚 ## 📚 ## 📚 Complete Documentation Map
+## 📚 Complete Documentation Map
 
 > [!TIP]
 > **New to the project?** Start with the **[Master Documentation Index](./docs/00_MASTER_DOCUMENTATION_INDEX.md)**. It serves as your central navigation hub for all 9 technical guides and reports.
