@@ -1178,19 +1178,17 @@ def run(source, weights: str, conf: float, show_window: bool,
     
             if paused: time.sleep(0.05); continue
     
-            # ── OS MUTEX: Lock hardware frame buffer during capture ──
-            with frame_buffer_lock:
-                ret, frame = cap.read()
-                if not ret: break
-        
-                h_orig, w_orig = frame.shape[:2]
-                proc_w = 640
-                proc_h = int(h_orig * (proc_w / w_orig))
-                
-                scale_x = w_orig / float(proc_w)
-                scale_y = h_orig / float(proc_h)
-        
-                small_frame = cv2.resize(frame, (proc_w, proc_h))
+            ret, frame = cap.read()
+            if not ret: break
+    
+            h_orig, w_orig = frame.shape[:2]
+            proc_w = 640
+            proc_h = int(h_orig * (proc_w / w_orig))
+            
+            scale_x = w_orig / float(proc_w)
+            scale_y = h_orig / float(proc_h)
+    
+            small_frame = cv2.resize(frame, (proc_w, proc_h))
     
             brightness = get_scene_brightness(small_frame)
             was_night = night_mode
@@ -1339,38 +1337,49 @@ def run(source, weights: str, conf: float, show_window: bool,
             # Ground exclusion threshold in original-frame pixel coordinates
             ground_y_orig = int(h_orig * current_ground_frac)
 
-            # ── OS RWLOCK: Synchronize writes to detection list ──
             hits = []
-            with detections_lock.writer_lock():
-                for box in results.boxes:
-                    label = class_names.get(int(box.cls[0]), f"cls")
-                    if is_missile_class(label):
-                        x1, y1, x2, y2 = box.xyxy[0].tolist()
-                        # Scale to original frame coordinates
-                        ox1 = int(round(x1 * scale_x))
-                        oy1 = int(round(y1 * scale_y))
-                        ox2 = int(round(x2 * scale_x))
-                        oy2 = int(round(y2 * scale_y))
-                        det_conf = float(box.conf[0])
-                        cy_box = (oy1 + oy2) // 2
-                        if cy_box >= ground_y_orig:
-                            if det_conf < yolo_below_ground_conf:
-                                continue
-                        hits.append({
-                            "box": (ox1, oy1, ox2 - ox1, oy2 - oy1),
-                            "label": label,
-                            "confidence": det_conf,
-                            "source": "yolo"
-                        })
-        
-                for d in flame_detections:
-                    bx, by, bw, bh = d["box"]
-                    d["box"] = (int(round(bx*scale_x)), int(round(by*scale_y)),
-                                int(round(bw*scale_x)), int(round(bh*scale_y)))
-                    min_conf = below_ground_conf if d.get("below_ground") else flame_min_conf
-                    if d["confidence"] >= min_conf:
-                        hits.append(d)
+            for box in results.boxes:
+                label = class_names.get(int(box.cls[0]), f"cls")
+                if is_missile_class(label):
+                    x1, y1, x2, y2 = box.xyxy[0].tolist()
+                    # Scale to original frame coordinates
+                    ox1 = int(round(x1 * scale_x))
+                    oy1 = int(round(y1 * scale_y))
+                    ox2 = int(round(x2 * scale_x))
+                    oy2 = int(round(y2 * scale_y))
+                    det_conf = float(box.conf[0])
+                    # Two-zone confidence gate for YOLO (mirrors IR pipeline):
+                    #   Above ground line → normal conf threshold (already pre-filtered by YOLO)
+                    #   Below ground line → stricter yolo_below_ground_conf gate so
+                    #     cars, buildings, and low-confidence shape hits near the ground
+                    #     don't flood the tracker, while a genuine high-confidence
+                    #     missile shape on the ground still gets through.
+                    cy_box = (oy1 + oy2) // 2
+                    if cy_box >= ground_y_orig:
+                        if det_conf < yolo_below_ground_conf:
+                            continue
+                    hits.append({
+                        "box": (ox1, oy1, ox2 - ox1, oy2 - oy1),
+                        "label": label,
+                        "confidence": det_conf,
+                        "source": "yolo"
+                    })
     
+            for d in flame_detections:
+                bx, by, bw, bh = d["box"]
+                d["box"] = (int(round(bx*scale_x)), int(round(by*scale_y)),
+                            int(round(bw*scale_x)), int(round(bh*scale_y)))
+                # Apply the appropriate confidence gate:
+                #   - Above ground exclusion line → normal flame_min_conf
+                #   - Below ground exclusion line → stricter below_ground_conf
+                #     (high-confidence IR only, e.g. very bright/large near-ground missile)
+                min_conf = below_ground_conf if d.get("below_ground") else flame_min_conf
+                if d["confidence"] >= min_conf:
+                    hits.append(d)
+    
+            # ── OS SYNCHRONIZATION: Detections Lock ──
+            # Use a writer lock to ensure thread-safe sorting and filtering of results
+            with detections_lock.writer_lock():
                 final_hits = []
                 for h_det in sorted(hits, key=lambda x: -x["confidence"]):
                     box = h_det["box"]
@@ -1433,25 +1442,26 @@ def run(source, weights: str, conf: float, show_window: bool,
                         # YOLO Detection: Tactical Ping (1800Hz)
                         threading.Thread(target=lambda: winsound.Beep(1800, 80), daemon=True).start()
     
-            # ── OS RWLOCK: Reader-access for HUD display ──
-            with detections_lock.reader_lock():
+            # ── OS SYNCHRONIZATION: Frame Buffer Lock ──
+            # Use a mutex to protect the image buffer during tactical HUD overlay rendering
+            with frame_buffer_lock:
                 for hit in active_hits:
                     bx, by, bw, bh = hit["box"]
-                # Determine if this target is inside the central HUD targeting ring
-                h_fr, w_fr = display.shape[:2]
-                ring_r = int(220 * ui_scale)
-                cx_fr, cy_fr = w_fr // 2, h_fr // 2
-                hit_cx = bx + bw // 2
-                hit_cy = by + bh // 2
-                target_in_ring = math.hypot(hit_cx - cx_fr, hit_cy - cy_fr) <= ring_r
+                    # Determine if this target is inside the central HUD targeting ring
+                    h_fr, w_fr = display.shape[:2]
+                    ring_r = int(220 * ui_scale)
+                    cx_fr, cy_fr = w_fr // 2, h_fr // 2
+                    hit_cx = bx + bw // 2
+                    hit_cy = by + bh // 2
+                    target_in_ring = math.hypot(hit_cx - cx_fr, hit_cy - cy_fr) <= ring_r
 
-                is_missile_hit = is_missile_class(hit.get("label", "")) or hit.get("source") == "flame"
-                draw_detection(display, bx, by, bx+bw, by+bh, hit["label"], hit["confidence"],
-                               is_missile_hit, night_mode, frame_idx, hit["tid"], ui_scale,
-                               dx=hit.get("dx", 0.0), dy=hit.get("dy", 0.0),
-                               source=hit["source"], in_ring=target_in_ring)
-    
-            trail_yolo.draw(display, night_mode, ui_scale)
+                    is_missile_hit = is_missile_class(hit.get("label", "")) or hit.get("source") == "flame"
+                    draw_detection(display, bx, by, bx+bw, by+bh, hit["label"], hit["confidence"],
+                                   is_missile_hit, night_mode, frame_idx, hit["tid"], ui_scale,
+                                   dx=hit.get("dx", 0.0), dy=hit.get("dy", 0.0),
+                                   source=hit["source"], in_ring=target_in_ring)
+        
+                trail_yolo.draw(display, night_mode, ui_scale)
     
             threat = "CLEAR" if missile_count == 0 else "CAUTION" if missile_count <= 3 else "CRITICAL" if missile_count <= 7 else "THREAT DETECTED"
     
