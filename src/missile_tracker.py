@@ -1091,6 +1091,21 @@ def run(source, weights: str, conf: float, show_window: bool,
     frame_count = 0
     total_detections = 0
     
+    # ── OS CONTENTION SIMULATOR: Background Tactical Monitor ──
+    # This thread periodically competes for locks to simulate multi-display tactical stress
+    monitor_running = True
+    def tactical_monitor():
+        while monitor_running:
+            # Randomly peek at detections and frame buffer at high frequency
+            with detections_lock.reader_lock():
+                time.sleep(0.0001) # 100 microseconds of "processing"
+            with frame_buffer_lock:
+                time.sleep(0.0001)
+            time.sleep(0.005) # 5ms interval to ensure overlap with main loop
+            
+    mon_thread = threading.Thread(target=tactical_monitor, daemon=True, name="TacticalMonitor")
+    mon_thread.start()
+    
     print("[INFO] OS components initialized successfully")
     print(f"  - Synchronization: RWLocks + Mutex + ConditionVariable")
     print(f"  - Memory: Pool allocator (500MB max)")
@@ -1493,13 +1508,15 @@ def run(source, weights: str, conf: float, show_window: bool,
     # Build Integrated Performance Table
     Dashboard = [
         ["Subsystem", "Metric", "Value"],
-        ["General", "Total Frames", str(frame_idx)],
-        ["General", "Detections", str(total_detections)],
-        ["Memory", "Cap Peak (MB)", f"{memory_manager.get_summary()['peak_in_use_mb']:.2f}"],
-        ["Memory", "Allocations", str(memory_manager.get_summary()['num_allocations'])],
-        ["Scheduler", "Tasks Run", str(scheduler.get_global_stats()['total_tasks_completed'])],
-        ["Scheduler", "Latency", f"{scheduler.get_global_stats()['avg_turnaround_time_ms']:.2f} ms"],
-        ["File I/O", "Log File", log_file_path],
+        ["General", "Total Frames", f"{frame_idx:>10}"],
+        ["General", "Detections", f"{total_detections:>10}"],
+        ["Memory", "Cap Peak (MB)", f"{memory_manager.get_summary()['peak_in_use_mb']:>9.2f}"],
+        ["Memory", "Allocations", f"{memory_manager.get_summary()['num_allocations']:>10}"],
+        ["Scheduler", "Tasks Run", f"{scheduler.get_global_stats()['total_tasks_completed']:>10}"],
+        ["Scheduler", "Throughput", f"{scheduler.get_global_stats()['throughput_tps']:>6.1f} tps"],
+        ["Scheduler", "Turnaround", f"{scheduler.get_global_stats()['avg_turnaround_time_ms']:>6.2f} ms"],
+        ["Scheduler", "Ctx Switches", f"{scheduler.get_global_stats()['context_switches']:>10}"],
+        ["File I/O", "Log Name", f"{log_file_path:>10}"],
         ["File I/O", "IO Strategy", "BUFFERED + FSYNC"],
     ]
 
@@ -1527,11 +1544,16 @@ def run(source, weights: str, conf: float, show_window: bool,
         cv2.imshow("Iron Dome Missile Tracker v3", cv2.resize(annotated, (1280, 720)) if w_orig > 1920 else annotated)
         cv2.waitKey(0)
 
+    # Cleanup
     cap.release()
     if writer: writer.release()
     cv2.destroyAllWindows()
     
-    # Final OS cleanup
+    # ── OS CONTENTION SIMULATOR: Cleanup ──
+    monitor_running = False
+    mon_thread.join(timeout=1.0)
+    
+    # Final Telemetry Persistence (using OS FileManager)
     if detection_log_fd is not None and file_manager:
         file_manager.close(detection_log_fd)
 

@@ -218,6 +218,7 @@ class TaskScheduler:
             task.state = TaskState.RUNNING
             task.stats.num_runs += 1
             start_time = time.perf_counter()
+            task.stats.start_time = time.time()
             
             # Execute task function
             task.result = task.func(*task.args, **task.kwargs)
@@ -232,10 +233,12 @@ class TaskScheduler:
                 logger.debug(f"Task {task.task_id} exceeded time quantum")
             
             task.state = TaskState.TERMINATED
+            task.stats.end_time = time.time()
             
         except Exception as e:
             task.exception = e
             task.state = TaskState.TERMINATED
+            task.stats.end_time = time.time()
             logger.error(f"Task {task.task_id} failed: {e}")
     
     def _worker(self) -> None:
@@ -351,7 +354,16 @@ class TaskScheduler:
                     (t.stats.end_time or time.time()) - t.stats.creation_time
                     for t in self.completed_tasks if t.stats.creation_time
                 ]
-                avg_turnaround_us = sum(turnarounds) / len(turnarounds) * 1_000_000 if turnarounds else 0
+                avg_turnaround_us = (sum(turnarounds) / len(turnarounds) * 1_000_000) if turnarounds else 0
+            
+            # Calculate throughput (tasks per second)
+            throughput = 0.0
+            if self.completed_tasks and len(self.completed_tasks) > 1:
+                start_first = self.completed_tasks[0].stats.creation_time
+                end_last = self.completed_tasks[-1].stats.end_time or time.time()
+                duration = end_last - start_first
+                if duration > 0:
+                    throughput = len(self.completed_tasks) / duration
             
             return {
                 'strategy': self.strategy.value,
@@ -361,6 +373,7 @@ class TaskScheduler:
                 'completed_tasks': len(self.completed_tasks),
                 **self.global_stats,
                 'avg_turnaround_time_ms': avg_turnaround_us / 1000.0,
+                'throughput_tps': throughput,
                 'context_switch_overhead_us': (self.global_stats['context_switches'] * 10) if self.global_stats['context_switches'] > 0 else 0
             }
 
