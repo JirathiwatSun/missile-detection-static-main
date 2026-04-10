@@ -16,27 +16,25 @@ Run: python demo_os_features.py
 import sys
 import os
 import time
-import numpy as np
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from os_synchronization import (
-    Mutex, Semaphore, RWLock, ConditionVariable,
-    SyncStrategy, get_sync_primitive
+    Mutex, Semaphore, RWLock, ConditionVariable
 )
 from os_memory import (
     MemoryManager, AllocationStrategy, FrameBufferPool,
-    init_memory_manager, get_memory_manager
+    init_memory_manager
 )
 from os_scheduler import (
     TaskScheduler, SchedulingStrategy, TaskPriority,
-    init_global_scheduler, get_global_scheduler
+    init_global_scheduler
 )
 from os_file_manager import (
     FileManager, FileMode, IOStrategy,
-    init_file_manager, get_file_manager
+    init_file_manager
 )
 
 
@@ -173,7 +171,7 @@ def demo_memory_management():
         channels=3
     )
     
-    print(f"Frame buffer pool: 5 buffers × (1920×1080×3)")
+    print(f"Frame buffer pool: 5 buffers x (1920x1080x3)")
     print(f"Total capacity: {5 * 1920 * 1080 * 3 * 4 / 1_000_000:.1f}MB")
     
     # Acquire buffers
@@ -463,9 +461,9 @@ Summary:
 
 Performance Gains:
 ------------------
-• Frame allocation: 84% faster with pool
-• Lock contention: Near-zero with RW-locks for readers
-• I/O flexibility: Choose between speed and durability
+- Frame allocation: 84% faster with pool
+- Lock contention: Near-zero with RW-locks for readers
+- I/O flexibility: Choose between speed and durability
 
 This demonstrates production-grade OS concepts in a real application.
         """)
