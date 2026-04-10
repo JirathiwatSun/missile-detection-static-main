@@ -1,6 +1,13 @@
 # Complete User Manual - OS Components Testing & Usage
 
-## Table of Contents
+## 🎯 UPDATED: April 10, 2026 with Active Implementation Proof
+
+> **Get Started:**
+> 1. Quick verification: `python demo_os_features.py` (3-5 min)
+> 2. Live tracker demo: `python -m src.missile_tracker --video sample.mp4` (see OS stats!)
+> 3. For presentation: Read [PRESENTATION_QUICK_REFERENCE.md](../PRESENTATION_QUICK_REFERENCE.md) first
+
+---
 
 1. [Prerequisites & Setup](#prerequisites--setup)
 2. [Quick Start](#quick-start)

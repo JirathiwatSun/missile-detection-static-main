@@ -216,13 +216,15 @@ missile-detection-static-main/
 | Document | Purpose | Time | Prerequisites |
 |----------|---------|------|---|
 | [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) | Complete presentation structure + Q&A | 20 min | Level 2 documents |
+| [docs/OS_IMPLEMENTATION_ACTIVE_USAGE.md](./docs/OS_IMPLEMENTATION_ACTIVE_USAGE.md) | Active implementation proof & metrics | 10 min | Level 3 documents |
+| [docs/PRESENTATION_QUICK_REFERENCE.md](./docs/PRESENTATION_QUICK_REFERENCE.md) | Presentation cheat sheet & talk tracks | 10 min | Level 5 documents |
 
 ---
 
 ## 📂 Project Structure
 
 ```
-├── 📁 docs/                                    ← COMPLETE DOCUMENTATION (10 Files)
+├── 📁 docs/                                    ← COMPLETE DOCUMENTATION (12 Files)
 │   ├── 00_MASTER_DOCUMENTATION_INDEX.md        ← Start here: Navigation hub
 │   ├── 01_START_HERE_QUICK_5MIN.md             ← Quick start (5 min)
 │   ├── 02_COMPONENTS_TECHNICAL_DEEP_DIVE.md    ← Technical details (30 min)
@@ -232,15 +234,17 @@ missile-detection-static-main/
 │   ├── 06_TESTING_COMPLETE_PROCEDURES.md       ← Full testing guide (30 min)
 │   ├── 07_TESTING_QUICK_REFERENCE.md           ← Test cheat sheet (5 min)
 │   ├── 08_PRESENTATION_CONTENT_GUIDE.md        ← For presentations (20 min)
+│   ├── OS_IMPLEMENTATION_ACTIVE_USAGE.md       ← Active metrics proof
+│   ├── PRESENTATION_QUICK_REFERENCE.md         ← Presentation cheat sheet
 │   └── Presentation_Report.md                  ← Written report
 │
 ├── 📁 src/                                     ← Source code (Python)
 │   ├── __init__.py                             ← Package initializer
-│   ├── missile_tracker.py                      ← Main application (1300+ lines)
-│   ├── os_synchronization.py                   ← Mutex, Semaphore, RWLock (350 lines)
-│   ├── os_memory.py                            ← Frame buffer pooling (360 lines)
-│   ├── os_scheduler.py                         ← Priority task scheduling (320 lines)
-│   └── os_file_manager.py                      ← I/O management (400 lines)
+│   ├── missile_tracker.py                      ← Main application
+│   ├── os_synchronization.py                   ← Mutex, Semaphore, RWLock
+│   ├── os_memory.py                            ← Frame buffer pooling
+│   ├── os_scheduler.py                         ← Priority task scheduling
+│   └── os_file_manager.py                      ← I/O management
 │
 ├── 📁 models/                                  ← Pre-trained weights
 │   ├── yolo26n_custom.pt                       ← Default detector (35MB)
@@ -252,21 +256,24 @@ missile-detection-static-main/
 │
 ├── 📁 datasets/                                ← Dataset root
 │   └── FINAL-MISSILES-2/                       ← Training dataset (9,206 images)
-│       └── README.dataset.md                   ← Dataset information
 │
 ├── 📁 scripts/                                 ← Utility scripts
 │   ├── download_data.py                        ← Data downloader
 │   └── train_yolo26.py                         ← Training script
 │
-├── 📁 os_demo_data/                            ← Generated demo logs
-├── 📁 detections/                              ← Tracking results
-├── 📁 runs/                                    ← Training results
+├── 📁 demo_data/                               ← Generated demo videos
+├── 📁 detection_logs/                          ← Detailed detection telemetry
+├── 📁 detections/                              ← Tracking result frames
+├── 📁 os_demo_data/                            ← Generated OS demo logs
+├── 📁 runs/                                    ← Training results & weights
+├── 📁 scratch/                                 ← Temporary work files
 │
 ├── demo_os_features.py                         ← OS component demo (runnable)
 ├── run.bat / run.sh                            ← Launch scripts
 ├── setup.bat / setup.sh                        ← One-click environment setup
 ├── requirements.txt                            ← Python dependencies
 ├── config.cfg                                  ← Configuration file
+├── LICENSE                                     ← MIT License
 └── .gitignore                                  ← Git exclusion rules
 ```
 

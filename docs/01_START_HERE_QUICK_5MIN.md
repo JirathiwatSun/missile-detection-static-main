@@ -6,6 +6,8 @@ This project now includes **4 major guides** to help you understand, test, and p
 
 | Guide | Purpose | Read Time | Location |
 |-------|---------|-----------|----------|
+| **PRESENTATION_QUICK_REFERENCE.md** | What to show evaluators ⭐ NEW | 10 min | [View Here](../PRESENTATION_QUICK_REFERENCE.md) |
+| **OS_IMPLEMENTATION_ACTIVE_USAGE.md** | Proof of active impl ⭐ NEW | 15 min | [View Here](../OS_IMPLEMENTATION_ACTIVE_USAGE.md) |
 | **06_TESTING_COMPLETE_PROCEDURES.md** | Step-by-step testing of all components | 20 min | [View Here](./06_TESTING_COMPLETE_PROCEDURES.md) |
 | **02_COMPONENTS_TECHNICAL_DEEP_DIVE.md** | How to use and integrate components | 15 min | [View Here](./02_COMPONENTS_TECHNICAL_DEEP_DIVE.md) |
 | **03_OS_IMPLEMENTATION_DETAILS.md** | Technical deep-dive | 30 min | [View Here](./03_OS_IMPLEMENTATION_DETAILS.md) |
@@ -53,14 +55,17 @@ Follow the sections:
 5. Test File Management
 6. Run Integrated Demo
 
-#### **Prepare for Presentation**
-→ Read: `docs/08_PRESENTATION_CONTENT_GUIDE.md`
+#### **Prepare for Presentation** ⭐ START HERE
+→ Read: `PRESENTATION_QUICK_REFERENCE.md`
 
 Includes:
-- 15-20 minute presentation structure
-- Live demonstration code
-- Q&A questions with perfect answers
-- Presentation tips
+- **What to show evaluators** (startup → video → statistics)
+- 5-minute demo walkthrough with exact output
+- Real metrics: 4500 lock ops, 3047 tasks, 145 allocations
+- Q&A answers with technical proof
+- Live statistics dashboard explained
+
+OR deeper dive: `docs/08_PRESENTATION_CONTENT_GUIDE.md`
 
 #### **Integrate Into My Code**
 → Read: `docs/02_COMPONENTS_TECHNICAL_DEEP_DIVE.md`

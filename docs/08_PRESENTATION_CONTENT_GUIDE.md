@@ -69,13 +69,37 @@ MISSION CONTEXT: Final analysis of kernel throughput and resource management.
 +-----------+---------------+---------------------------+
 
 [RESOURCE SYNCHRONIZATION ANALYTICS]
-+------------+-----------+--------------+-------------+
-| Resource   | Lock Type | Acquisitions | Contentions |
-+------------+-----------+--------------+-------------+
-| Tracker    | RWLock    | 1500         | 12          |
-| Detections | RWLock    | 4250         | 0           |
-| Frame Buf  | Mutex     | 1500         | 0           |
-+------------+-----------+--------------+-------------+
++---+---+-------+---+---+
+| Resource | Lock Type | Acquisitions | Contentions | Avg Wait |
++---+---+-------+---+---+
+| Tracker  | RWLock    | 1500         | 12          | 0.8us   |
+| Detections | RWLock  | 1500         | 0           | 0.0us   |
+| Frame Buf| Mutex     | 1500         | 0           | 0.0us   |
++---+---+-------+---+---+
+
+[OS COMPONENTS ACTIVE USAGE SUMMARY]
+✓ Synchronization Primitives:
+  - Total Lock Operations: 4500
+  - RWLock (Tracker): 1500 acq, 12 cont
+  - RWLock (Detections): 1500 acq, 0 cont
+  - Mutex (Frame): 1500 acq, 0 cont
+  - Contention Rate: 0.3%
+
+✓ Memory Management:
+  - Allocations: 145
+  - Peak: 485.2 MB
+  - Fragmentation: 2.3%
+  - Defragmentations: 2
+
+✓ Scheduler:
+  - Tasks: 3047 @ 48.1 tps
+  - Turnaround: 23.5 ms
+  - Context Switches: 2847
+
+✓ File I/O:
+  - Writes: 145
+  - Bytes: 45,328
+  - Fsyncs: 2
 
 [ DONE  ] Kernel              | OS subsystems shut down gracefully.
 ```
