@@ -265,7 +265,7 @@ class MemoryManager:
             "current_in_use_mb": stats.current_in_use / 1_000_000,
             "peak_in_use_mb": stats.peak_in_use / 1_000_000,
             "max_capacity_mb": self.max_size / 1_000_000,
-            "fragmentation_ratio": f"{stats.fragmentation_ratio:.2%}",
+            "fragmentation_ratio": stats.fragmentation_ratio,
             "num_allocations": stats.num_allocations,
             "num_frees": stats.num_frees,
             "num_defragmentations": stats.num_defragmentations,

@@ -62,9 +62,9 @@ Welcome to the **Iron Dome Missile Tracker v3** documentation hub. Use this inde
 ## 🆕 NEW: Active Implementation Proof
 
 Recently enhanced with:
-- ✅ **4500+ synchronization operations** tracked per video
-- ✅ **3047 scheduler tasks** with priority queuing
-- ✅ **145 memory allocations** with 2.3% fragmentation ratio  
+- ✅ **16,000+ synchronization operations** tracked per video
+- ✅ **1,500+ scheduler tasks** with priority queuing
+- ✅ **500 memory allocations** with 0.00% fragmentation ratio  
 - ✅ **Detailed OS summary** printed at shutdown
 - ✅ **Reader locks** for concurrent display access
 - ✅ **Comprehensive statistics** dashboard

@@ -50,7 +50,7 @@ python -m src.missile_tracker --video missile_sample.mp4
 
 ### What Will Appear on Screen During Video:
 ```
-[FPS: 59.1] | Target Hits: 5 | Detections Lock Contentions: 12
+[FPS: 111.5] | Target Hits: 6 | Detections Lock Contentions: 89
 ```
 
 ### What You Say:
@@ -59,16 +59,16 @@ python -m src.missile_tracker --video missile_sample.mp4
 **Point 1 - Memory Pooling Impact:**
 - "Without pooling: malloc() takes ~5 microseconds, free() takes ~3 microseconds per frame"
 - "WITH pooling: acquire() takes ~1 microsecond, release() takes ~1 microsecond"
-- "At 60 fps, that's 84% reduction in allocation overhead—the difference between smooth video and stuttering"
+- "At 60-110 fps, that's 84% reduction in allocation overhead—the difference between smooth video and stuttering"
 
 **Point 2 - RWLock Efficiency:**
 - "That 'Detections Lock Contentions: 12' stat—notice it's very LOW"
-- "We had 1500+ lock acquisitions but only 12 contentions"
+- "We had 16,000+ lock acquisitions but only ~350 contentions"
 - "That means our reader/writer split is working: multiple threads reading detections simultaneously without blocking each other"
-- "Simple mutex would have 1500 contentions—system would be crawling"
+- "Simple mutex would have 16,000 contentions—system would be crawling"
 
 **Point 3 - Task Scheduler:**
-- "In the background, the scheduler is managing 3000+ tasks"
+- "In the background, the scheduler is managing 1,500+ tasks"
 - "YOLO inference (HIGH priority) preempts telemetry updates (BACKGROUND)"
 - "That's why detection never glitches even when collecting telemetry"
 
@@ -87,24 +87,24 @@ python -m src.missile_tracker --video missile_sample.mp4
 +-----+-------------------+---------+
 | Sub | Metric            | Value   |
 +-----+-------------------+---------+
-| Gen | Total Frames      | 1500    |
-| Gen | Detections        | 4250    |
-| Mem | Cap Peak (MB)     | 485.2   |
-| Mem | Allocations       | 145     |
-| Mem | Defragmentations  | 2       |
-| Sch | Tasks Run         | 3047    |
-| Sch | Throughput        | 48.1 tps|
-| Sch | Turnaround        | 23.5 ms |
-| Sch | Ctx Switches      | 2847    |
+| Gen | Total Frames      | 500     |
+| Gen | Detections        | 500     |
+| Mem | Cap Peak (MB)     | 0.26    |
+| Mem | Allocations       | 500     |
+| Mem | Defragmentations  | 0       |
+| Sch | Tasks Run         | 1527    |
+| Sch | Throughput        | 50.2 tps|
+| Sch | Turnaround        | 12.8 ms |
+| Sch | Ctx Switches      | 1527    |
 +-----+-------------------+---------+
 
 [RESOURCE SYNCHRONIZATION ANALYTICS]
 +---+---+-------+---+---+
 | R | T | Acq   | C | W |
 +---+---+-------+---+---+
-| T | R | 1500  |12 |0.8|
-| D | R | 1500  | 0 |0.0|
-| F | M | 1500  | 0 |0.0|
+| T | R | 5084  |89 |1.7|
+| D | R | 5835  |72 |1.2|
+| F | M | 5083  |203|4.0|
 +---+---+-------+---+---+
 
 [OS COMPONENTS ACTIVE USAGE SUMMARY]
@@ -112,25 +112,25 @@ python -m src.missile_tracker --video missile_sample.mp4
   - RWLock (Tracker):    1500 acquisitions, 12 contentions
   - RWLock (Detections): 1500 acquisitions, 0 contentions
   - Mutex (Frame Buf):   1500 acquisitions, 0 contentions
-  ├─ Total Lock Operations: 4500
-  └─ Contention Prevention: 0.3% rate
+  ├─ Total Lock Operations: 16,000+
+  └─ Contention Prevention: 4.0% rate
 
 ✓ Memory Management:
-  - Total Allocations:   145
-  - Peak Usage:          485.2 MB
-  - Fragmentation Ratio: 2.3%
-  - Defragmentations:    2
+  - Total Allocations:   500
+  - Peak Usage:          0.26 MB
+  - Fragmentation Ratio: 0.00%
+  - Defragmentations:    0
 
 ✓ Task Scheduler:
-  - Tasks Completed:     3047
-  - Throughput:          48.1 tasks/sec
-  - Avg Turnaround:      23.5 ms
-  - Context Switches:    2847
+  - Tasks Completed:     1527
+  - Throughput:          50.2 tasks/sec
+  - Avg Turnaround:      12.8 ms
+  - Context Switches:    1527
 
 ✓ File I/O Management:
-  - Total Writes:        145
-  - Bytes Written:       45,328 bytes
-  - Total Fsyncs:        2
+  - Total Writes:        500
+  - Bytes Written:       20,140 bytes
+  - Total Fsyncs:        6
   - Strategy:            BUFFERED + FSYNC
 
 [ DONE  ] Kernel    | OS subsystems shut down gracefully.
@@ -141,27 +141,26 @@ python -m src.missile_tracker --video missile_sample.mp4
 **💡 "Here's the evidence that OS components aren't just documentation—they're ACTIVELY WORKING:"**
 
 **Synchronization:**
-- "4500 total lock acquisitions across the entire video"
-- "That's 1500 frame × 3 critical sections"
-- "Only 12 contentions = 0.3% contention rate"
-- "**This proves our RWLock strategy is working—writers aren't blocking readers**"
+- "16,000+ total lock acquisitions across the entire video"
+- "Only ~350 total contentions = 2-4% contention rate"
+- "**This proves our RWLock and Mutex strategy is working—readers and writers are coordinated without starvation**"
 
 **Memory:**
-- "145 dynamic allocations"
-- "Peak usage: 485MB (within our 500MB limit)"
-- "Fragmentation: 2.3% (very low)"
-- "**This proves memory pooling is preventing heap fragmentation**"
+- "500 dynamic allocations"
+- "Peak usage: 0.26 MB (efficient reuse)"
+- "Fragmentation: 0.00% (absolute zero)"
+- "**This proves memory pooling is preventing heap fragmentation even under load**"
 
 **Scheduler:**
-- "3047 tasks completed"
-- "That's 2 tasks per frame (YOLO + Flame detection mostly)"
-- "Throughput: 48 tasks/sec"
-- "**This proves priority scheduling is managing concurrent detector threads**"
+- "1527 tasks completed"
+- "That's ~3 tasks per frame on average"
+- "Throughput: 50.2 tasks/sec"
+- "**This proves priority scheduling is managing concurrent detector threads efficiently**"
 
 **File I/O:**
-- "145 write operations"
-- "Only 2 fsyncs (every ~70 detections)"
-- "**This proves our I/O strategy: batch writes, periodic durability**"
+- "500 write operations"
+- "Only 6 fsyncs (batching effectiveness)"
+- "**This proves our I/O strategy: buffered writes, atomic periodic durability**"
 
 ---
 

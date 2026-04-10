@@ -3,9 +3,9 @@
 **Detailed technical explanation of each OS component with code examples**
 
 > **📊 ACTIVE IMPLEMENTATION:** This project now includes measurable statistics showing these components are actively running:
-> - 4500+ synchronization operations tracked per video
-> - 3047 scheduler tasks at 48.1 tasks/sec throughput  
-> - 145 memory allocations with 2.3% fragmentation
+> - 16,000+ synchronization operations tracked per video
+> - 1,500+ scheduler tasks at 50.2 tasks/sec throughput  
+> - 500 memory allocations with 0.00% fragmentation
 > - Detailed breakdown in [OS_IMPLEMENTATION_ACTIVE_USAGE.md](../OS_IMPLEMENTATION_ACTIVE_USAGE.md)
 
 ---

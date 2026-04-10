@@ -61,7 +61,7 @@ Follow the sections:
 Includes:
 - **What to show evaluators** (startup → video → statistics)
 - 5-minute demo walkthrough with exact output
-- Real metrics: 4500 lock ops, 3047 tasks, 145 allocations
+- Real metrics: 16,000 lock ops, 1500 tasks, 500 allocations
 - Q&A answers with technical proof
 - Live statistics dashboard explained
 
@@ -82,31 +82,15 @@ Shows:
 
 ```
 missile-detection-static-main/
-│
-├── src/
-│   ├── os_synchronization.py    ← Mutex, Semaphore, RWLock, CV
-│   ├── os_memory.py             ← Memory Manager, Frame Buffer Pool
-│   ├── os_scheduler.py          ← Task Scheduling
-│   ├── os_file_manager.py       ← File I/O Management
-│   └── missile_tracker.py       ← Original missile detection code
-│
-├── docs/
-│   ├── 00_MASTER_DOCUMENTATION_INDEX.md  ← Navigation hub (START HERE)
-│   ├── 01_START_HERE_QUICK_5MIN.md       ← You are here!
-│   ├── 02_COMPONENTS_TECHNICAL_DEEP_DIVE.md
-│   ├── 03_OS_IMPLEMENTATION_DETAILS.md
-│   ├── 04_HOW_OS_INTEGRATES_TRACKER.md
-│   ├── 05_INTEGRATION_CODE_EXAMPLES.md
-│   ├── 06_TESTING_COMPLETE_PROCEDURES.md
-│   ├── 07_TESTING_QUICK_REFERENCE.md
-│   ├── 08_PRESENTATION_CONTENT_GUIDE.md
-│   └── Presentation_Report.md            ← Original written report
-│
-├── demo_os_features.py                  ← Integrated demo (RUN THIS!)
-├── IMPLEMENTATION_SUMMARY.md            ← Project summary
-├── README.md                            ← Main project entry point
-│
-└── ... (other files)
+├── docs/                                    ← 12 Technical Guides
+├── src/                                     ← OS Modules & Core Tracker
+├── models/                                  ← Pre-trained weights (.pt)
+├── data/                                    ← Test videos & images
+├── datasets/                                ← Training data (9,206 images)
+├── scripts/                                 ← Download & Train scripts
+├── demo_os_features.py                      ← Integrated OS demo
+├── setup.bat / setup.sh                     ← Setup scripts
+└── run.bat / run.sh                         ← Launch scripts
 ```
 
 ---

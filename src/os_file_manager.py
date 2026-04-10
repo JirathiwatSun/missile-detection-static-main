@@ -401,6 +401,8 @@ class FileManager:
                 'total_closes': self.stats.total_closes,
                 'total_reads': self.stats.total_reads,
                 'total_writes': self.stats.total_writes,
+                'total_bytes_read': self.stats.total_bytes_read,
+                'total_bytes_written': self.stats.total_bytes_written,
                 'total_bytes_read_mb': self.stats.total_bytes_read / 1_000_000,
                 'total_bytes_written_mb': self.stats.total_bytes_written / 1_000_000,
                 'total_fsyncs': self.stats.total_fsyncs,
@@ -408,6 +410,10 @@ class FileManager:
                 'max_file_size_mb': self.stats.max_file_size / 1_000_000,
                 'cache_vs_disk_ratio': f"{(self.stats.cache_writes / max(self.stats.total_fsyncs, 1)):.1f}:1"
             }
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Alias for get_global_stats for consistency with other modules"""
+        return self.get_global_stats()
 
 
 # Global file manager instance
