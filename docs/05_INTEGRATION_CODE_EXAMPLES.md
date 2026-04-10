@@ -12,12 +12,13 @@ All code examples below are taken directly from the running missile tracker.
 
 | Component | Location in Code | Active? |
 |-----------|-----------------|---------|
-| Imports | Line 24-28 | ✅ Yes |
-| Initialization | Line 1020-1060 | ✅ Yes |
-| Tracker locking | Line 1340 | ✅ Yes |
-| Detection logging | Line 1343-1350 | ✅ Yes |
-| Shutdown | Line 1420-1450 | ✅ Yes |
-| Stats reporting | Line 1425-1445 | ✅ Yes |
+| Imports | Line ~40 | ✅ Yes |
+| Initialization | Line ~1070 | ✅ Yes |
+| YOLO Scheduling | Line ~1320 | ✅ Yes |
+| IR Scheduling | Line ~1330 | ✅ Yes |
+| Sync Locking | Line ~1400 | ✅ Yes |
+| Mission Debrief | Line ~1504 | ✅ Yes |
+| Dash Tables | Line ~1513 | ✅ Yes |
 
 ---
 
@@ -26,7 +27,7 @@ All code examples below are taken directly from the running missile tracker.
 All OS modules are imported at the top of `missile_tracker.py`:
 
 ```python
-# Lines 24-28 (actual code)
+# Lines ~40 (actual code)
 # ─ OS COMPONENTS INTEGRATION ─
 from src.os_synchronization import Mutex, RWLock, ConditionVariable
 from src.os_memory import MemoryManager, AllocationStrategy
@@ -56,104 +57,66 @@ from src.os_file_manager import FileManager, FileMode, IOStrategy
 
 **AFTER: With OS Components (optimized)**
 ```python
-frame_idx = 0
-
 while True:
     # ═══════════════════════════════════════════════════════════════
-    # 1. ACQUIRE FRAME BUFFER (from pool, ~0.1us instead of 200-500us)
+    # 1. PARSE FRAME & SETUP (Main Loop)
     # ═══════════════════════════════════════════════════════════════
-    
-    frame_buffer_lock.lock()
-    try:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
-        # Get pre-allocated buffer from pool instead of malloc
-        frame_buf = frame_pool.acquire()
-        if frame_buf is None:
-            print("WARNING: No free buffers")
-            continue
-        
-        # Resize into pre-allocated buffer
-        h_orig, w_orig = frame.shape[:2]
-        proc_w = 640
-        proc_h = int(h_orig * (proc_w / w_orig))
-        resized = cv2.resize(frame, (proc_w, proc_h))
-        frame_buf[:] = resized  # Copy into pool buffer
-        
-    finally:
-        frame_buffer_lock.unlock()
+    ret, frame = cap.read()
+    if not ret: break
     
     # ═══════════════════════════════════════════════════════════════
-    # 2. SUBMIT HIGH-PRIORITY YOLO DETECTION (to scheduler)
+    # 2. OFFLOAD YOLO INFERENCE (to High-Priority Worker)
     # ═══════════════════════════════════════════════════════════════
-    
-    yolo_task_id = scheduler.submit_task(
-        func=detector.__call__,
-        args=(frame_buf,),
-        priority=TaskPriority.HIGH,           # ← Highest priority
-        name=f"yolo_detection_frame_{frame_idx}"
+    tid_yolo = scheduler.submit_task(
+        model, 
+        args=(small_enhanced,), 
+        priority=TaskPriority.HIGH, 
+        name="YOLO_Inference"
     )
     
     # ═══════════════════════════════════════════════════════════════
-    # 3. WAIT FOR DETECTIONS (with timeout for real-time)
+    # 3. OFFLOAD IR FLAME DETECTION (to Normal-Priority Worker)
     # ═══════════════════════════════════════════════════════════════
-    
-    detections = None
-    try:
-        detections = scheduler.get_result(yolo_task_id, timeout_sec=0.016)  # 16ms for 60fps
-    except TimeoutError:
-        print(f"Frame {frame_idx}: Detection timed out")
-        detections = []
-    
-    # ═══════════════════════════════════════════════════════════════
-    # 4. SUBMIT NORMAL-PRIORITY KALMAN TRACKING
-    # ═══════════════════════════════════════════════════════════════
-    
-    track_task_id = scheduler.submit_task(
-        func=lambda dets: tracker.update(dets),
-        args=(detections,),
-        priority=TaskPriority.NORMAL,        # ← Medium priority
-        name=f"kalman_tracking_frame_{frame_idx}"
-    )
-    
-    # ═══════════════════════════════════════════════════════════════
-    # 5. SAFE READ OF TRACKER STATE (using RWLock)
-    # ═══════════════════════════════════════════════════════════════
-    
-    # Multiple readers can access simultaneously
-    tracker_state_lock.acquire_read()
-    try:
-        current_tracks = tracker.get_all_tracks()  # Safe concurrent read
-        missiles = [t for t in current_tracks if t.is_missile]
-    finally:
-        tracker_state_lock.release_read()
-    
-    # ═══════════════════════════════════════════════════════════════
-    # 6. SUBMIT BACKGROUND-PRIORITY LOGGING (doesn't block display)
-    # ═══════════════════════════════════════════════════════════════
-    
-    log_task_id = scheduler.submit_task(
-        func=write_detection_log,
-        args=(frame_idx, detections, missiles),
-        priority=TaskPriority.BACKGROUND,    # ← Lowest priority
-        name=f"log_detections_frame_{frame_idx}"
-    )
-    
-    # ═══════════════════════════════════════════════════════════════
-    # 7. RELEASE FRAME BUFFER BACK TO POOL (for reuse)
-    # ═══════════════════════════════════════════════════════════════
-    
-    frame_pool.release(frame_buf)
-    
-    frame_idx += 1
+    if night_mode:
+        tid_flame = scheduler.submit_task(
+            flame_detector.detect, 
+            args=(small_enhanced, ...),
+            priority=TaskPriority.NORMAL, 
+            name="IR_Flame_Detection"
+        )
 
-# Cleanup
+    # ═══════════════════════════════════════════════════════════════
+    # 4. WAIT FOR RESULTS (Real-time Wait Loop)
+    # ═══════════════════════════════════════════════════════════════
+    yolo_result = scheduler.wait_for_task(tid_yolo)
+    if night_mode:
+        flame_detections = scheduler.wait_for_task(tid_flame)
+
+    # ═══════════════════════════════════════════════════════════════
+    # 5. SAFE TRACKER UPDATE (using RWLock)
+    # ═══════════════════════════════════════════════════════════════
+    # Multiple reader display threads could run while we lock for writing
+    with detections_lock.writer_lock():
+        final_hits = filter_and_sort(hits)
+        
+    with tracker_lock:
+        active_hits = trail_yolo.update(final_hits)
+    
+    # ═══════════════════════════════════════════════════════════════
+    # 6. LOGGING & MEMORY MANAGEMENT
+    # ═══════════════════════════════════════════════════════════════
+    if final_hits:
+        # Log to file via OS FileManager
+        file_manager.write(detection_log_fd, log_data)
+        
+        # Allocate telemetry buffer via OS MemoryManager
+        memory_manager.allocate(size, owner=f"telemetry_frame_{idx}")
+
+# Shutdown Sequence
 scheduler.stop()
+file_manager.fsync(detection_log_fd)
 file_manager.close(detection_log_fd)
-file_manager.close(alert_log_fd)
-frame_pool.cleanup()
+```
 ```
 
 ---

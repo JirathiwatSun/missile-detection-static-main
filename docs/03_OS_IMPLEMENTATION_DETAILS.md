@@ -461,41 +461,34 @@ Round-Robin (10ms quantum):
 
 ## Part 4: Integration with Missile Tracker
 
-### How to Enable OS Components
+### How to Enable OS Components (Integrated Flow)
+
+The OS components are integrated directly into the `run()` function of `missile_tracker.py`.
 
 ```python
-from src.missile_tracker import MissileTracker
-from src.os_scheduler import init_global_scheduler, SchedulingStrategy
-from src.os_memory import init_memory_manager, FrameBufferPool
-from src.os_file_manager import init_file_manager
-
-# Initialize OS components
-scheduler = init_global_scheduler(SchedulingStrategy.PRIORITY, max_workers=4)
-memory_mgr = init_memory_manager(max_size_bytes=1_000_000_000)
-file_mgr = init_file_manager("./detections")
-
-frame_pool = FrameBufferPool(
-    buffer_size=1080*1920*3*4,
-    num_buffers=10,
-    height=1080,
-    width=1920
-)
-
-# Create tracker with OS components
-tracker = MissileTracker(
-    scheduler=scheduler,
-    frame_pool=frame_pool,
-    file_manager=file_mgr
-)
-
+# From src/missile_tracker.py (Line ~1070)
+# 1. Initialize OS components
+detections_lock = RWLock("detections_access", track_stats=True)
+tracker_lock = RWLock("tracker_state", track_stats=True)
+scheduler = TaskScheduler(strategy=SchedulingStrategy.PRIORITY)
 scheduler.start()
-tracker.run(video_path="missile.mp4")
-scheduler.stop()
 
-# Print OS statistics
+# 2. Main Loop: Parallel Offloading
+while True:
+    # Offload heavy AI works to OS workers
+    tid_yolo = scheduler.submit_task(model, args=(frame,), priority=TaskPriority.HIGH)
+    
+    # 3. Synchronize: Wait for mission completion
+    # System Call: waitpid() / pthread_join() equivalent
+    result = scheduler.wait_for_task(tid_yolo, timeout_sec=0.033)
+    
+    # 4. Thread-Safe State Management
+    with tracker_lock:
+        active_hits = trail_yolo.update(result)
+
+# 5. Graceful Shutdown & Stats
+scheduler.stop()
 print(scheduler.get_global_stats())
-print(memory_mgr.get_summary())
-print(file_mgr.get_global_stats())
 ```
 
 ---

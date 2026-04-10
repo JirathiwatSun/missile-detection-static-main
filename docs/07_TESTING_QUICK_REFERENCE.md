@@ -395,7 +395,7 @@ tasks = [
 
 for name, duration, priority in tasks:
     tid = scheduler.submit_task(
-        sample_task,
+        tactical_mission,
         args=(name, duration),
         priority=priority,
         name=name

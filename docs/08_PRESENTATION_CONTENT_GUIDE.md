@@ -90,7 +90,7 @@ MISSION CONTEXT: Final analysis of kernel throughput and resource management.
 Open `src/missile_tracker.py` and highlight:
 
 ```python
-# Line 24-28: Imports
+# Line ~40: Imports
 from src.os_synchronization import Mutex, RWLock, ConditionVariable
 from src.os_memory import MemoryManager, AllocationStrategy
 from src.os_scheduler import TaskScheduler, SchedulingStrategy, TaskPriority
@@ -98,16 +98,14 @@ from src.os_file_manager import FileManager, FileMode, IOStrategy
 ```
 
 ```python
-# Line 1020-1060: Initialization
+# Line ~1070: Initialization
 print("[INFO] Initializing OS components...")
 detections_lock = RWLock("detections_access", track_stats=True)
 tracker_lock = RWLock("tracker_state", track_stats=True)
-frame_buffer_lock = Mutex("frame_buffer", track_stats=True)
-detection_ready = ConditionVariable("detection_ready")
-memory_manager = MemoryManager(max_size_bytes=500_000_000, strategy=AllocationStrategy.POOL)
-file_manager = FileManager(data_dir=os.path.join(BASE_DIR, "detection_logs"))
-detection_log_fd = file_manager.open(log_file_path, FileMode.WRITE, IOStrategy.BUFFERED)
+# ... initializing memory, file manager, and scheduler ...
 scheduler = TaskScheduler(strategy=SchedulingStrategy.PRIORITY)
+scheduler.start()
+```
 ```
 
 ```python

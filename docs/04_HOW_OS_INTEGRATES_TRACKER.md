@@ -402,7 +402,7 @@ The integration is **now live** in the code. Here's exactly what happens:
 ### Initialization (at startup)
 
 ```python
-# Line ~1020 in run() function
+# Line ~1070 in run() function
 TacticalDisplay.header()
 print("[INFO] Initializing OS components...")
 
