@@ -37,7 +37,7 @@ print()
 
 # Create tactical mutex with statistics tracking
 mutex = Mutex('interceptor_fire_lock', track_stats=True)
-print('[OK] Created Tactical Mutex')
+print('✅ Created Tactical Mutex')
 print()
 
 print('Test 1: Missile Guidance Lock')
@@ -60,7 +60,7 @@ print(f'  Contentions (waits): {stats.contentions}')
 print(f'  Max wait time: {stats.max_wait_time_us:.2f}us')
 print(f'  Avg wait time: {stats.avg_wait_time_us():.2f}us')
 print()
-print('[OK] Mutex test passed')
+print('✅ Mutex test passed')
 "
 ```
 
@@ -68,7 +68,7 @@ print('[OK] Mutex test passed')
 ```
 === MUTEX TEST ===
 
-[OK] Created Mutex
+✅ Created Mutex
 
 Test 1: Basic lock/unlock
 --------------------------------------------------
@@ -92,7 +92,7 @@ print('=== SEMAPHORE TEST ===')
 print()
 
 sem = Semaphore(3, 'detector_thread_pool', track_stats=True)
-print('[OK] Created Tactical Semaphore (Pool size: 3)')
+print('✅ Created Tactical Semaphore (Pool size: 3)')
 print()
 
 print('Test 1: Radar Thread Allocation')
@@ -115,7 +115,7 @@ for i in range(3):
     print(f'  After release {i+1}: slots_available = {sem.count}')
 
 print()
-print('[OK] Tactical Semaphore test passed')
+print('✅ Tactical Semaphore test passed')
 "
 ```
 
@@ -134,7 +134,7 @@ print('=== RWLOCK TEST (Multi-Reader) ===')
 print()
 
 rwlock = RWLock('radar_data_access', track_stats=True)
-print('[OK] Created RWLock')
+print('✅ Created RWLock')
 print()
 
 print('Test 1: Multiple readers (concurrent)')
@@ -172,7 +172,7 @@ print(f'  Read contentions: {read_stats.contentions}')
 print(f'  Write acquisitions: {write_stats.acquisitions}')
 
 print()
-print('[OK] RWLock test passed')
+print('✅ RWLock test passed')
 "
 ```
 
@@ -191,7 +191,7 @@ print('=== CONDITION VARIABLE TEST ===')
 print()
 
 cv = ConditionVariable('interceptor_ready_signal')
-print('[OK] Created ConditionVariable')
+print('✅ Created ConditionVariable')
 print()
 
 print('Test 1: Signal and wait pattern')
@@ -213,7 +213,7 @@ is_ready = cv.wait(
 print(f'  Consumer: Woken up! Ready state: {is_ready}')
 
 print()
-print('[OK] Condition Variable test passed')
+print('✅ Condition Variable test passed')
 "
 ```
 
@@ -237,7 +237,7 @@ mem_mgr = MemoryManager(
     max_size_bytes=100_000_000,
     strategy=AllocationStrategy.POOL
 )
-print('[OK] Created MemoryManager (100MB capacity)')
+print('✅ Created MemoryManager (100MB capacity)')
 print()
 
 print('Test 1: Memory allocation')
@@ -275,7 +275,7 @@ print(f'  Current allocation: {stats.current_in_use / 1_000_000:.1f}MB')
 print(f'  Free blocks: {len(mem_mgr.free_blocks)}')
 
 print()
-print('[OK] Memory Manager test passed')
+print('✅ Memory Manager test passed')
 "
 ```
 
@@ -302,7 +302,7 @@ pool = FrameBufferPool(
     channels=3
 )
 capacity_mb = (5 * 1920 * 1080 * 3 * 4) / 1_000_000
-print(f'[OK] Created Frame Buffer Pool')
+print(f'✅ Created Frame Buffer Pool')
 print(f'  Capacity: {capacity_mb:.1f}MB')
 print()
 
@@ -351,7 +351,7 @@ print(f'  1000 cycles: {elapsed_ms:.2f}ms')
 print(f'  Per cycle: {elapsed_ms/1000*1000:.2f}us')
 
 print()
-print('[OK] Frame Buffer Pool test passed')
+print('✅ Frame Buffer Pool test passed')
 "
 ```
 
@@ -381,7 +381,7 @@ scheduler = init_global_scheduler(
     max_workers=2
 )
 scheduler.start()
-print('[OK] Started scheduler (2 workers)')
+print('✅ Started scheduler (2 workers)')
 print()
 
 def tactical_mission(name, duration):
@@ -426,7 +426,7 @@ print(f'  Context switches: {stats[\"context_switches\"]}')
 print()
 
 scheduler.stop()
-print('[OK] Task Scheduler test passed')
+print('✅ Task Scheduler test passed')
 "
 ```
 
@@ -447,7 +447,7 @@ print('=== FILE MANAGER TEST ===')
 print()
 
 fm = FileManager(data_dir='./test_os_files')
-print('[OK] Created FileManager')
+print('✅ Created FileManager')
 print()
 
 print('Test 1: Buffered I/O (Fast)')
@@ -490,7 +490,7 @@ print(f'  Total closes: {stats[\"total_closes\"]}')
 print(f'  Total fsyncs: {stats[\"total_fsyncs\"]}')
 
 print()
-print('[OK] File Manager test passed')
+print('✅ File Manager test passed')
 "
 ```
 
@@ -512,7 +512,7 @@ python demo_os_features.py
 
 ### Quick test all components compile:
 ```bash
-python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; from os_memory import MemoryManager; from os_scheduler import TaskScheduler; from os_file_manager import FileManager; print('[OK] All compiled')"
+python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; from os_memory import MemoryManager; from os_scheduler import TaskScheduler; from os_file_manager import FileManager; print('✅ All compiled')"
 ```
 
 ### Quick test imports work:
@@ -522,15 +522,15 @@ import sys
 sys.path.insert(0, 'src')
 print('Testing imports...')
 from os_synchronization import Mutex, Semaphore, RWLock
-print('[OK] Synchronization imported')
+print('✅ Synchronization imported')
 from os_memory import MemoryManager, FrameBufferPool
-print('[OK] Memory imported')
+print('✅ Memory imported')
 from os_scheduler import TaskScheduler
-print('[OK] Scheduler imported')
+print('✅ Scheduler imported')
 from os_file_manager import FileManager
-print('[OK] File Manager imported')
+print('✅ File Manager imported')
 print()
-print('[OK] All components imported successfully!')
+print('✅ All components imported successfully!')
 "
 ```
 
@@ -601,7 +601,7 @@ cat test_result.txt
 cd missile-detection-static-main
 
 # Then try again
-python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK]')"
+python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('✅')"
 ```
 
 ### "Permission denied"

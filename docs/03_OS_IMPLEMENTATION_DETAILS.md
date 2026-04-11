@@ -427,7 +427,7 @@ Buffered (no fsync):
 
 Direct + fsync:
   - Time: 150,000us (100,000us fsync + 50,000us write)
-  - Data safety: [OK] Durable
+  - Data safety: ✅ Durable
   - Best for: Critical alerts
 
 Recommendation:
@@ -551,11 +551,11 @@ python src/missile_tracker.py --video data/videos/Iron_Dome.mp4
 
 This implementation demonstrates:
 
-[OK] Core OS concepts (scheduling, memory, synchronization, file I/O)
-[OK] Proper system call usage
-[OK] Performance trade-offs with documentation
-[OK] Real-world application in missile detection
-[OK] Measurable improvements in latency and throughput
+✅ Core OS concepts (scheduling, memory, synchronization, file I/O)
+✅ Proper system call usage
+✅ Performance trade-offs with documentation
+✅ Real-world application in missile detection
+✅ Measurable improvements in latency and throughput
 
 **Impact on Missile Tracker:**
 - 74% reduction in allocation latency (pool vs. malloc)

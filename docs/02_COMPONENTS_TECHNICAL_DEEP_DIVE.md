@@ -239,7 +239,7 @@ while True:
     frame_pool.release(buffer)
     
     # NO garbage collection delays!
-    # → Consistent 60fps! [OK]
+    # → Consistent 60fps! ✅
 ```
 
 ---
@@ -596,7 +596,7 @@ Strategy:
 │  └─ 1 fsync per 167ms = 4-5m overhead
 │  └─ Fits easily in budget!
 
-Result: 60fps maintained [OK]
+Result: 60fps maintained ✅
 ```
 
 ---

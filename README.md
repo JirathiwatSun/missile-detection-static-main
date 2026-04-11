@@ -93,8 +93,8 @@ chmod +x setup.sh run.sh
 👉 **Best for:** Real-time detection from your camera
 
 ### ✅ Step 4: Verify Installation
-- **Windows:** `.venv\Scripts\python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK] All components ready')"`
-- **macOS/Linux:** `./.venv/bin/python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK] All components ready')"`
+- **Windows:** `.venv\Scripts\python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('✅ All components ready')"`
+- **macOS/Linux:** `./.venv/bin/python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('✅ All components ready')"`
 
 **✅ SETUP COMPLETE! You now have:**
 - ✅ Python environment with PyTorch
@@ -104,7 +104,7 @@ chmod +x setup.sh run.sh
 
 ---
 
-## � **RECOMMENDED: Use Windows for Best Performance**
+## 🪟 **RECOMMENDED: Use Windows for Best Performance**
 
 **For optimal results, Windows 10/11 is strongly recommended:**
 
@@ -458,7 +458,7 @@ This project demonstrates:
 
 ---
 
-##  System Requirements & Platform Compatibility
+## ⚙️ System Requirements & Platform Compatibility
 
 ### **Supported Platforms**
 
@@ -717,7 +717,7 @@ names: ['missile'] # Class names
 python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
 
 # Verify all dependencies installed
-python -c "from ultralytics import YOLO; print('[OK] YOLOv8 ready')"
+python -c "from ultralytics import YOLO; print('✅ YOLOv8 ready')"
 ```
 
 #### Step 2: Understand Training Parameters

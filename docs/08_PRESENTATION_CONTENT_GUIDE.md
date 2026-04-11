@@ -373,7 +373,7 @@ FIFO              Poor              Good        5%
 Priority          Excellent         Poor        8%
 Round-Robin       Good              Excellent   12%
 
-[OK] We chose PRIORITY for real-time responsiveness
+✅ We chose PRIORITY for real-time responsiveness
 ```
 
 #### Key Question & Answer
@@ -675,14 +675,14 @@ for i in range(100):
     rwlock.release_read()  # Release so writer can acquire
     
 read_stats = rwlock.stats['reads']
-print(f'[OK] Read stats: {read_stats.contentions} contentions')
+print(f'✅ Read stats: {read_stats.contentions} contentions')
 
 # Now writer (exclusive)
 print('Acquiring exclusive write lock...')
 start = time.time()
 rwlock.acquire_write()
 write_time = (time.time() - start) * 1000
-print(f'[OK] Write wait time: {write_time:.2f}ms')
+print(f'✅ Write wait time: {write_time:.2f}ms')
 rwlock.release_write()
 "
 ```
@@ -708,8 +708,8 @@ for _ in range(100):
     times.append((time.perf_counter() - start) * 1_000_000)
     pool.release(buf)
 
-print(f'[OK] Avg acquire time: {sum(times)/len(times):.2f}us')
-print(f'[OK] Pool stats: {pool.get_stats()}')
+print(f'✅ Avg acquire time: {sum(times)/len(times):.2f}us')
+print(f'✅ Pool stats: {pool.get_stats()}')
 "
 ```
 

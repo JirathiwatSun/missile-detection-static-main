@@ -236,9 +236,9 @@ while True:
 
 ```
 Frame arrives at t=0ms
-├─ HIGH priority  : YOLO runs            [t=0-12ms]   [OK] completes in time
-├─ NORMAL priority: Kalman tracking      [t=12-14ms]  [OK] completes in time  
-└─ BACKGROUND    : Write log to disk     [t=14-16ms]  [OK] completes before next frame
+├─ HIGH priority  : YOLO runs            [t=0-12ms]   ✅ completes in time
+├─ NORMAL priority: Kalman tracking      [t=12-14ms]  ✅ completes in time  
+└─ BACKGROUND    : Write log to disk     [t=14-16ms]  ✅ completes before next frame
 
 Next frame arrives at t=16.67ms
 └─ (Previous frame logging still completing, but won't block next detection)
