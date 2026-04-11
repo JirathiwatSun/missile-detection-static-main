@@ -11,7 +11,9 @@ __pycache__/
 
 # Datasets & Models
 datasets/
-runs/
+runs/*
+!runs/detect/missile_yolo26_custom/
+
 models/*.pt
 !models/missile.pt
 !models/yolo26n_custom.pt

@@ -798,6 +798,29 @@ runs/detect/missile_yolo26_custom/
 └── args.yaml            ← Training configuration
 ```
 
+### 📊 **Model Performance Dashboard (Pre-trained Results)**
+
+The current pre-trained model (`yolo26n_custom.pt`) was trained over 100 epochs using the included dataset. Below are the performance metrics currently achieved by the AI engine:
+
+| Metric | Accuracy Score |
+| :--- | :--- |
+| **Precision** | **85.0%** |
+| **Recall** | **76.9%** |
+| **mAP@50** | **83.9%** |
+
+#### **Actual Results from `runs/` Folder:**
+
+![Results Gallery](runs/detect/missile_yolo26_custom/results.png)
+*Combined training metrics (Loss, Precision, Recall, mAP) over time.*
+
+![Confusion Matrix](runs/detect/missile_yolo26_custom/confusion_matrix_normalized.png)
+*Normalized confusion matrix for pre-trained model.*
+
+👉 **For advanced analysis, open [docs/Presentation_Report.md](./docs/Presentation_Report.md)**
+
+---
+
+
 **Watch Training in Real-Time:**
 ```bash
 # Open tensorboard (if saved)

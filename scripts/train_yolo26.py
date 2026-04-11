@@ -29,7 +29,7 @@ def train_model():
         batch=16,
         device=device,
         name='missile_yolo26_custom',
-        exist_ok=True,
+        exist_ok=False,
         # NMS-free training is a key feature of YOLO26
         # but is typically handled internally by the architecture
     )
