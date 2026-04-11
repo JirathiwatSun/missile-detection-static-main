@@ -60,7 +60,7 @@ case "$1" in
         # Check if --download-data is present in arguments
         for arg in "$@"; do
             if [ "$arg" == "--download-data" ]; then
-                echo "[ACTION] Redircting to data download..."
+                echo "[ACTION] Redirecting to data download..."
                 $PYTHON scripts/download_data.py
                 exit 0
             fi
@@ -148,6 +148,8 @@ case "$1" in
         echo
         echo " Examples:"
         echo "   ./run.sh track --video data/videos/Iron_Dome.mp4"
+        echo "   ./run.sh track --video data/videos/Iron_Dome.mp4 --night --weights models/missile.pt"
+        echo "   ./run.sh track --video data/videos/Iron_Dome.mp4 --conf 0.20"
         echo "   ./run.sh track --cam 0 --night --save"
         echo
         echo " Training:"
@@ -167,3 +169,9 @@ case "$1" in
         echo "   IR   = missile detected by IR exhaust / dim-dot tracking"
         ;;
 esac
+
+# Quick-launch (remove leading # to activate):
+# ./run.sh track --video data/videos/Iron_Dome.mp4 --weights models/missile.pt
+# ./run.sh track --video data/videos/Iron_Dome.mp4 --weights models/yolo26n_custom.pt
+# ./run.sh track --video data/videos/NIGHT@.mp4
+# ./run.sh track --video data/videos/IRAN!1.mp4

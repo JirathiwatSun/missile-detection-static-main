@@ -48,5 +48,5 @@ echo "  chmod +x run.sh"
 echo "  ./run.sh track --video data/videos/Iron_Dome.mp4"
 echo
 echo "NOTE: If you need to download the training dataset later, run:"
-echo "  ./run.sh train"
+echo "  ./run.sh train (or python3 scripts/download_data.py)"
 echo
