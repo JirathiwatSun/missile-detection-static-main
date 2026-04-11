@@ -273,10 +273,7 @@ missile-detection-static-main/
 │
 ├── 📁 demo_data/                               ← Generated demo videos
 ├── 📁 detection_logs/                          ← Detailed detection telemetry
-├── 📁 detections/                              ← Tracking result frames
-├── 📁 os_demo_data/                            ← Generated OS demo logs
 ├── 📁 runs/                                    ← Training results & weights
-├── 📁 scratch/                                 ← Temporary work files
 │
 ├── demo_os_features.py                         ← OS component demo (runnable)
 ├── run.bat / run.sh                            ← Launch scripts
@@ -404,40 +401,6 @@ C — Take screenshot
 
 ---
 
-## 📖 Learning Paths
-
-### Path A: Understand the Theory (Start here)
-1. [docs/01_START_HERE_QUICK_5MIN.md](./docs/01_START_HERE_QUICK_5MIN.md) - 10 min
-2. [docs/03_OS_IMPLEMENTATION_DETAILS.md](./docs/03_OS_IMPLEMENTATION_DETAILS.md) - 30 min
-3. [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) - 20 min
-
-### Testing Path
-1. [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) - 5 min (cheat sheet)
-2. [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) - 30 min (run all tests)
-
-### Integration Path
-1. [docs/04_HOW_OS_INTEGRATES_TRACKER.md](./docs/04_HOW_OS_INTEGRATES_TRACKER.md) - 20 min
-2. [docs/05_INTEGRATION_CODE_EXAMPLES.md](./docs/05_INTEGRATION_CODE_EXAMPLES.md) - 30 min
-3. Modify: `src/missile_tracker.py` with OS components - 60+ min
-
-### Path D: Presentation Ready (For finals)
-1. [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) - 20 min
-2. Practice with: `python demo_os_features.py` - 10 min
-
----
-
-## 🚨 Troubleshooting
-
-### Running into an issue?
-
-| Problem | Solution | More Info |
-|---------|----------|-----------|
-| **Import errors** | Use `.\run.bat track ...` or use the `.venv` python | [docs/01_START_HERE_QUICK_5MIN.md](./docs/01_START_HERE_QUICK_5MIN.md) |
-| **Slow FPS** | Use `--auto-night` flag | [docs/03_OS_IMPLEMENTATION_DETAILS.md](./docs/03_OS_IMPLEMENTATION_DETAILS.md) |
-| **Demo hangs** | See timeout solutions | [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) |
-| **Need quick test** | Run `demo_os_features.py` using `.venv` | [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) |
-| **Presentation** | See Q&A guide | [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) |
-
 ---
 
 ## 📋 Key Files at a Glance
@@ -552,12 +515,6 @@ sudo dnf install mesa-libGL libsm libxext
 ```
 
 ---
-
-## 🗺️ System Requirements & Platform Compatibility (Reference)
-
-For detailed information on supported platforms, hardware requirements, and GPU support, please refer to the [System Requirements](#️-system-requirements--platform-compatibility) section earlier in this document.
-
-
 
 ---
 
