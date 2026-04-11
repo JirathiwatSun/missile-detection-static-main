@@ -6,8 +6,8 @@ This project now includes **4 major guides** to help you understand, test, and p
 
 | Guide | Purpose | Read Time | Location |
 |-------|---------|-----------|----------|
-| **PRESENTATION_QUICK_REFERENCE.md** | What to show evaluators ⭐ NEW | 10 min | [View Here](./PRESENTATION_QUICK_REFERENCE.md) |
-| **OS_IMPLEMENTATION_ACTIVE_USAGE.md** | Proof of active impl ⭐ NEW | 15 min | [View Here](./OS_IMPLEMENTATION_ACTIVE_USAGE.md) |
+| **PRESENTATION_TALK_TRACK_CHEATSHEET.md** | What to show evaluators ⭐ NEW | 10 min | [View Here](./PRESENTATION_TALK_TRACK_CHEATSHEET.md) |
+| **OS_ACTIVE_IMPLEMENTATION_METRICS.md** | Proof of active impl ⭐ NEW | 15 min | [View Here](./OS_ACTIVE_IMPLEMENTATION_METRICS.md) |
 | **06_TESTING_COMPLETE_PROCEDURES.md** | Step-by-step testing of all components | 20 min | [View Here](./06_TESTING_COMPLETE_PROCEDURES.md) |
 | **02_COMPONENTS_TECHNICAL_DEEP_DIVE.md** | How to use and integrate components | 15 min | [View Here](./02_COMPONENTS_TECHNICAL_DEEP_DIVE.md) |
 | **03_OS_IMPLEMENTATION_DETAILS.md** | Technical deep-dive | 30 min | [View Here](./03_OS_IMPLEMENTATION_DETAILS.md) |
@@ -56,7 +56,7 @@ Follow the sections:
 6. Run Integrated Demo
 
 #### **Prepare for Presentation** ⭐ START HERE
-→ Read: `./PRESENTATION_QUICK_REFERENCE.md`
+→ Read: `./PRESENTATION_TALK_TRACK_CHEATSHEET.md`
 
 Includes:
 - **What to show evaluators** (startup → video → statistics)

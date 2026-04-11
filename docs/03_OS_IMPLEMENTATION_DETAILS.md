@@ -15,7 +15,7 @@ This document details the OS concepts and components integrated into the Missile
 - **Performance & Design Trade-offs (20%)**: Documented performance considerations
 - **Presentation (30%)**: Clear demonstration through examples
 
-> **📊 See [OS_IMPLEMENTATION_ACTIVE_USAGE.md](./OS_IMPLEMENTATION_ACTIVE_USAGE.md) for line-by-line proof of active integration**
+> **📊 See [OS_ACTIVE_IMPLEMENTATION_METRICS.md](./OS_ACTIVE_IMPLEMENTATION_METRICS.md) for line-by-line proof of active integration**
 
 ---
 

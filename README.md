@@ -226,8 +226,8 @@ missile-detection-static-main/
 | Document | Purpose | Time | Prerequisites |
 |----------|---------|------|---|
 | [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) | Complete presentation structure + Q&A | 20 min | Level 2 documents |
-| [docs/OS_IMPLEMENTATION_ACTIVE_USAGE.md](./docs/OS_IMPLEMENTATION_ACTIVE_USAGE.md) | Active implementation proof & metrics | 10 min | Level 3 documents |
-| [docs/PRESENTATION_QUICK_REFERENCE.md](./docs/PRESENTATION_QUICK_REFERENCE.md) | Presentation cheat sheet & talk tracks | 10 min | Level 5 documents |
+| [docs/OS_ACTIVE_IMPLEMENTATION_METRICS.md](./docs/OS_ACTIVE_IMPLEMENTATION_METRICS.md) | Active implementation proof & metrics | 10 min | Level 3 documents |
+| [docs/PRESENTATION_TALK_TRACK_CHEATSHEET.md](./docs/PRESENTATION_TALK_TRACK_CHEATSHEET.md) | Presentation cheat sheet & talk tracks | 10 min | Level 5 documents |
 
 ---
 
@@ -244,9 +244,9 @@ missile-detection-static-main/
 │   ├── 06_TESTING_COMPLETE_PROCEDURES.md       ← Full testing guide (30 min)
 │   ├── 07_TESTING_QUICK_REFERENCE.md           ← Test cheat sheet (5 min)
 │   ├── 08_PRESENTATION_CONTENT_GUIDE.md        ← For presentations (20 min)
-│   ├── OS_IMPLEMENTATION_ACTIVE_USAGE.md       ← Active metrics proof
-│   ├── PRESENTATION_QUICK_REFERENCE.md         ← Presentation cheat sheet
-│   └── Presentation_Report.md                  ← Final Report Submission
+│   ├── OS_ACTIVE_IMPLEMENTATION_METRICS.md     ← Active metrics proof
+│   ├── PRESENTATION_TALK_TRACK_CHEATSHEET.md   ← Presentation cheat sheet
+│   └── FINAL_REPORT_SUBMISSION.md              ← Final Report Submission
 │
 ├── 📁 src/                                     ← Source code (Python)
 │   ├── __init__.py                             ← Package initializer
@@ -816,7 +816,7 @@ The current pre-trained model (`yolo26n_custom.pt`) was trained over 100 epochs 
 ![Confusion Matrix](runs/detect/missile_yolo26_custom/confusion_matrix_normalized.png)
 *Normalized confusion matrix for pre-trained model.*
 
-👉 **For advanced analysis, open [docs/Presentation_Report.md](./docs/Presentation_Report.md)**
+👉 **For advanced analysis, open [docs/FINAL_REPORT_SUBMISSION.md](./docs/FINAL_REPORT_SUBMISSION.md)**
 
 ---
 

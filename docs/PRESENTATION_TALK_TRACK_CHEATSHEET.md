@@ -221,7 +221,7 @@ python -m src.missile_tracker --video missile_sample.mp4
 ### Reference Files to Keep Open:
 
 1. **Proof of Implementation:**
-   - [OS_IMPLEMENTATION_ACTIVE_USAGE.md](OS_IMPLEMENTATION_ACTIVE_USAGE.md) ← Line numbers for each component
+   - [OS_ACTIVE_IMPLEMENTATION_METRICS.md](OS_ACTIVE_IMPLEMENTATION_METRICS.md) ← Line numbers for each component
    - [README.md (Rubric Tracking)](../README.md#🎯-grading-rubric-coverage) ← Grading rubric alignment
    - [src/missile_tracker.py](../src/missile_tracker.py) ← Line 1075-1545 shows integration
 

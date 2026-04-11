@@ -4,7 +4,7 @@
 
 This file contains all testing commands you can copy and paste directly.
 
-> **🎯 TIP:** See [PRESENTATION_QUICK_REFERENCE.md](./PRESENTATION_QUICK_REFERENCE.md) for what to show evaluators!
+> **🎯 TIP:** See [PRESENTATION_TALK_TRACK_CHEATSHEET.md](./PRESENTATION_TALK_TRACK_CHEATSHEET.md) for what to show evaluators!
 
 ---
 

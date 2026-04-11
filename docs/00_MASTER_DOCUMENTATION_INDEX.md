@@ -44,8 +44,8 @@ Welcome to the **Iron Dome Missile Tracker v3** documentation hub. Use this inde
 | File | Purpose | Time |
 |:---|:---|:---|
 | [08_PRESENTATION_CONTENT_GUIDE.md](./08_PRESENTATION_CONTENT_GUIDE.md) | Complete presentation structure + Q&A | 20 min |
-| [PRESENTATION_QUICK_REFERENCE.md](./PRESENTATION_QUICK_REFERENCE.md) | **NEW:** Cheat sheet for talk tracks & metrics | 10 min |
-| [Presentation_Report.md](./Presentation_Report.md) | **Final Report Submission** (Technical) | 15 min |
+| [PRESENTATION_TALK_TRACK_CHEATSHEET.md](./PRESENTATION_TALK_TRACK_CHEATSHEET.md) | **NEW:** Cheat sheet for talk tracks & metrics | 10 min |
+| [FINAL_REPORT_SUBMISSION.md](./FINAL_REPORT_SUBMISSION.md) | **Final Report Submission** (Technical) | 15 min |
 
 ---
 
@@ -69,7 +69,7 @@ Recently enhanced with:
 - ✅ **Reader locks** for concurrent display access
 - ✅ **Comprehensive statistics** dashboard
 
-See [OS_IMPLEMENTATION_ACTIVE_USAGE.md](./OS_IMPLEMENTATION_ACTIVE_USAGE.md) for detailed proof.
+See [OS_ACTIVE_IMPLEMENTATION_METRICS.md](./OS_ACTIVE_IMPLEMENTATION_METRICS.md) for detailed proof.
 
 ---
 
