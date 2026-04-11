@@ -269,7 +269,7 @@ missile-detection-static-main/
 ├── setup.bat / setup.sh                        ← One-click environment setup
 ├── requirements.txt                            ← Python dependencies
 ├── config.cfg                                  ← Configuration file
-├── LICENSE                                     ← MIT License
+├── LICENSE                                     ← Proprietary (All Rights Reserved)
 └── .gitignore                                  ← Git exclusion rules
 ```
 
