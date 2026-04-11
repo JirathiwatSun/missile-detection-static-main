@@ -6,6 +6,20 @@ Welcome to the **Iron Dome Missile Tracker v3** - a production-ready system comb
 
 ![Tracker Components](https://img.shields.io/badge/AI%20Engine-YOLO26n-brightgreen) ![OS Components](https://img.shields.io/badge/OS%20Level-Sync%2FMemory%2FScheduler%2FIO-blue) ![Real-time](https://img.shields.io/badge/Performance-60fps%20Consistent-critical)
 
+## ⚖️ License & Ownership
+
+**Copyright © 2026 Jirathiwat Suntipreedatham. All Rights Reserved.**
+
+This project is **PROPRIETARY** and is protected by international copyright laws. This software represents ongoing development work in high-fidelity tactical missile tracking and OS resource optimization.
+
+> [!CAUTION]
+> **RESTRICTED WORK: DO NOT DUPLICATE WITHOUT PERMISSION**
+> 
+> Unauthorized copying, distribution, modification, or reverse engineering of any part of this software—including source code, documentation, images, and AI model weights (`.pt` files)—is strictly prohibited. 
+
+For all inquiries regarding use, licensing, or duplication, please contact the owner:
+**Jirathiwat Suntipreedatham** (Bangkok, Thailand).
+
 ---
 
 ## ⚡ **QUICK START (Get It Running Now!)**
@@ -1013,21 +1027,6 @@ git push origin main
 
 ---
 
-## ⚖️ License & Ownership
-
-**Copyright © 2026 Jirathiwat Suntipreedatham. All Rights Reserved.**
-
-This project is **PROPRIETARY** and is protected by international copyright laws. This software represents ongoing development work in high-fidelity tactical missile tracking and OS resource optimization.
-
-> [!CAUTION]
-> **RESTRICTED WORK: DO NOT DUPLICATE WITHOUT PERMISSION**
-> 
-> Unauthorized copying, distribution, modification, or reverse engineering of any part of this software—including source code, documentation, images, and AI model weights (`.pt` files)—is strictly prohibited. 
-
-For all inquiries regarding use, licensing, or duplication, please contact the owner:
-**Jirathiwat Suntipreedatham** (Bangkok, Thailand).
-
----
 
 *This project is built for tactical research and educational purposes. Always ensure you are following local regulations regarding the use of such software.*
 
