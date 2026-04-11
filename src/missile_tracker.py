@@ -1634,6 +1634,7 @@ def parse_args():
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--night", action="store_true")
     mode.add_argument("--day",   action="store_true")
+    mode.add_argument("--auto-night", action="store_true", help="Enable automatic night/day mode switching based on scene brightness (Default)")
     p.add_argument("--night-sensitivity", type=int, default=AUTO_NIGHT_THRESHOLD)
     p.add_argument("--save", action="store_true")
     p.add_argument("--bright-thresh", type=int, default=170)

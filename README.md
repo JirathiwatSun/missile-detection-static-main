@@ -64,27 +64,23 @@ chmod +x setup.sh run.sh
 ### (START) Step 3: Run (Choose One)
 
 **Option A: See OS Components in Action (FASTEST - 3 min)**
-```bash
-python demo_os_features.py
-```
+- **Windows:** `.venv\Scripts\python demo_os_features.py`
+- **macOS/Linux:** `./.venv/bin/python demo_os_features.py`
 👉 **Best for:** Quick demo of all 4 OS components
 
 **Option B: Missile Tracker with Demo Video (5 min)**
-```bash
-python src/missile_tracker.py --video data/videos/Iron_Dome.mp4 --auto-night
-```
+- **Windows:** `.\run.bat track --video data\videos\Iron_Dome.mp4 --auto-night`
+- **macOS/Linux:** `./run.sh track --video data/videos/Iron_Dome.mp4 --auto-night`
 👉 **Best for:** See real-time detection & tracking
 
 **Option C: Live from Webcam**
-```bash
-python src/missile_tracker.py --cam 0
-```
+- **Windows:** `.\run.bat track --cam 0`
+- **macOS/Linux:** `./run.sh track --cam 0`
 👉 **Best for:** Real-time detection from your camera
 
 ### ✅ Step 4: Verify Installation
-```bash
-python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK] All components ready')"
-```
+- **Windows:** `.venv\Scripts\python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK] All components ready')"`
+- **macOS/Linux:** `./.venv/bin/python -c "import sys; sys.path.insert(0, 'src'); from os_synchronization import Mutex; print('[OK] All components ready')"`
 
 **✅ SETUP COMPLETE! You now have:**
 - ✅ Python environment with PyTorch
@@ -422,11 +418,11 @@ C — Take screenshot
 
 | Problem | Solution | More Info |
 |---------|----------|-----------|
-| Import errors | Run `setup.bat` or `setup.sh` | [docs/01_START_HERE_QUICK_5MIN.md](./docs/01_START_HERE_QUICK_5MIN.md) |
-| Slow FPS | Use `--auto-night` flag | [docs/03_OS_IMPLEMENTATION_DETAILS.md](./docs/03_OS_IMPLEMENTATION_DETAILS.md) |
-| Demo hangs | See timeout solutions | Follow [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) for: |
-| Need quick test | See cheatsheet | Follow [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) for: |
-| Presentation questions | See Q&A guide | [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) |
+| **Import errors** | Use `.\run.bat track ...` or use the `.venv` python | [docs/01_START_HERE_QUICK_5MIN.md](./docs/01_START_HERE_QUICK_5MIN.md) |
+| **Slow FPS** | Use `--auto-night` flag | [docs/03_OS_IMPLEMENTATION_DETAILS.md](./docs/03_OS_IMPLEMENTATION_DETAILS.md) |
+| **Demo hangs** | See timeout solutions | [docs/06_TESTING_COMPLETE_PROCEDURES.md](./docs/06_TESTING_COMPLETE_PROCEDURES.md) |
+| **Need quick test** | Run `demo_os_features.py` using `.venv` | [docs/07_TESTING_QUICK_REFERENCE.md](./docs/07_TESTING_QUICK_REFERENCE.md) |
+| **Presentation** | See Q&A guide | [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md) |
 
 ---
 
@@ -485,7 +481,7 @@ This project demonstrates:
 
 ---
 
-## �️ System Requirements & Platform Compatibility
+##  System Requirements & Platform Compatibility
 
 ### **Supported Platforms**
 
@@ -543,7 +539,7 @@ sudo dnf install mesa-libGL libsm libxext
 
 ---
 
-## �️ ## 🗺️ System Requirements & Platform Compatibility (Reference)
+## 🗺️ System Requirements & Platform Compatibility (Reference)
 
 For detailed information on supported platforms, hardware requirements, and GPU support, please refer to the [System Requirements](#️-system-requirements--platform-compatibility) section earlier in this document.
 
@@ -551,7 +547,7 @@ For detailed information on supported platforms, hardware requirements, and GPU 
 
 ---
 
-## �📋 Platform-Specific Setup Instructions
+## 📋 Platform-Specific Setup Instructions
 
 ### **Windows Setup**
 ```powershell
