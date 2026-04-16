@@ -96,6 +96,7 @@ chmod +x setup.sh run.sh
 **Option B: Missile Tracker with Demo Video (5 min)**
 - **Windows:** `.\run.bat track --video data\videos\Iron_Dome.mp4`
 - **macOS/Linux:** `./run.sh track --video data/videos/Iron_Dome.mp4`
+  - 💡 **Note:** Quotes are optional → `./run.sh track --video 'data/videos/Iron_Dome.mp4'` also works
 👉 **Best for:** See real-time detection & tracking
 
 **Option C: Live from Webcam**
