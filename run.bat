@@ -113,11 +113,11 @@ goto :EOF
 :usage
 echo.
 echo  Usage:
-echo    run.bat track --video data\videos\video.mp4          (auto day/night)
-echo    run.bat track --video data\videos\video.mp4 --night  (force night mode)
-echo    run.bat track --video data\videos\video.mp4 --day    (force day mode)
-echo    run.bat track --video data\videos\video.mp4 --save   (save output_tracked.mp4)
-echo    run.bat track --cam 0 --night                        (webcam, night mode)
+echo    .\run.bat track --video data\videos\video.mp4          (auto day/night)
+echo    .\run.bat track --video data\videos\video.mp4 --night  (force night mode)
+echo    .\run.bat track --video data\videos\video.mp4 --day    (force day mode)
+echo    .\run.bat track --video data\videos\video.mp4 --save   (save output_tracked.mp4)
+echo    .\run.bat track --cam 0 --night                        (webcam, night mode)
 echo.
 echo  All default values are configured in: config.cfg
 echo  Any flag listed below overrides config.cfg for a single run.
@@ -138,10 +138,10 @@ echo    --save                   Save output to output_tracked.mp4
 echo    --no-window              Run headless (no display window)
 echo.
 echo  Examples:
-echo    run.bat track --video data\videos\Iron_Dome.mp4
-echo    run.bat track --video data\videos\Iron_Dome.mp4 --night --weights models\missile.pt
-echo    run.bat track --video data\videos\Iron_Dome.mp4 --conf 0.20
-echo    run.bat track --cam 0 --night --save
+echo    .\run.bat track --video data\videos\Iron_Dome.mp4
+echo    .\run.bat track --video data\videos\Iron_Dome.mp4 --night --weights models\missile.pt
+echo    .\run.bat track --video data\videos\Iron_Dome.mp4 --conf 0.20
+echo    .\run.bat track --cam 0 --night --save
 echo.
 echo  Training:
 echo    run.bat train
@@ -160,11 +160,11 @@ echo    YOLO = missile detected by shape model
 echo    IR   = missile detected by IR exhaust / dim-dot tracking
 
 REM Quick-launch (remove leading REM to activate):
-REM NOTE: Do NOT use single quotes around video paths. Use format: run.bat track --video data\videos\video.mp4
-REM run.bat track --video data\videos\Iron_Dome.mp4 --weights models\missile.pt
-REM run.bat track --video data\videos\Iron_Dome.mp4 --weights models\yolo26n_custom.pt
-REM run.bat track --video data\videos\NIGHT@.mp4
-REM run.bat track --video data\videos\IRAN!1.mp4
+REM NOTE: Do NOT use single quotes around video paths. Use format: .\run.bat track --video data\videos\video.mp4
+REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\missile.pt
+REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\yolo26n_custom.pt
+REM .\run.bat track --video data\videos\NIGHT@.mp4
+REM .\run.bat track --video data\videos\IRAN!1.mp4
 
 :download_data
 echo [ACTION] Downloading tactical missile dataset...

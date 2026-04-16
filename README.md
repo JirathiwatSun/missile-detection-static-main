@@ -94,7 +94,7 @@ chmod +x setup.sh run.sh
 👉 **Best for:** Quick demo of all 4 OS components
 
 **Option B: Missile Tracker with Demo Video (5 min)**
-- **Windows:** `run.bat track --video data\videos\Iron_Dome.mp4`
+- **Windows:** `.\run.bat track --video data\videos\Iron_Dome.mp4`
 - **macOS/Linux:** `./run.sh track --video data/videos/Iron_Dome.mp4`
 👉 **Best for:** See real-time detection & tracking
 
@@ -180,8 +180,8 @@ Some files are **too large for GitHub** so they're excluded by `.gitignore`. Thi
 
 | Folder | Files | Size | Reason | How to Get |
 |--------|-------|------|--------|-----------|
-| `datasets/FINAL-MISSILES-2/` | Training images & labels | ~2.5GB | Training data | `run.bat download-data` |
-| `models/` | Pre-trained weights | ~100MB | AI models | `run.bat download-data` |
+| `datasets/FINAL-MISSILES-2/` | Training images & labels | ~2.5GB | Training data | `.\run.bat download-data` |
+| `models/` | Pre-trained weights | ~100MB | AI models | `.\run.bat download-data` |
 | `runs/` | Training results | Varies | Generated after training | Created when you train |
 | `.git/` | Repository history | N/A | Git metadata | Already in repo |
 
@@ -527,7 +527,7 @@ cd missile-detection-static-main
 .\run.bat download-data
 
 # 4. Run tracker
-run.bat track --video data\videos\Iron_Dome.mp4
+.\run.bat track --video data\videos\Iron_Dome.mp4
 ```
 
 ### **macOS Setup**
@@ -549,7 +549,7 @@ chmod +x setup.sh run.sh
 ./run.sh download-data
 
 # 6. Run tracker (note: first run slower on macOS due to GPU initialization)
-./run.sh track --video 'data/videos/Iron_Dome.mp4'
+./run.sh track --video data/videos/Iron_Dome.mp4
 ```
 
 **macOS Specific Tips:**
@@ -577,7 +577,7 @@ chmod +x setup.sh run.sh
 ./run.sh download-data
 
 # 6. Run tracker
-./run.sh track --video 'data/videos/Iron_Dome.mp4'
+./run.sh track --video data/videos/Iron_Dome.mp4
 ```
 
 **Linux-Specific Tips:**
