@@ -1489,6 +1489,7 @@ Source Code:
 
 # macOS/Linux:
 ./.venv/bin/python -m src/missile_tracker --video data/videos/sample.mp4 --show-stats
+  # 💡 Quotes are optional: ./.venv/bin/python -m src/missile_tracker --video 'data/videos/sample.mp4' --show-stats
 ```
 
 **Individual Component Tests (20 minutes):**
