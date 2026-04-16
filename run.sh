@@ -182,7 +182,11 @@ case "$1" in
 esac
 
 # Quick-launch (remove leading # to activate):
-# ./run.sh track --video 'data/videos/Iron_Dome.mp4' --weights models/missile.pt
-# ./run.sh track --video 'data/videos/Iron_Dome.mp4' --weights models/yolo26n_custom.pt
-# ./run.sh track --video 'data/videos/NIGHT@.mp4'
-# ./run.sh track --video 'data/videos/IRAN!1.mp4'
+# NOTE: run.sh automatically strips quotes, so both formats work:
+#   ./run.sh track --video data/videos/Iron_Dome.mp4              (recommended)
+#   ./run.sh track --video 'data/videos/Iron_Dome.mp4'            (also works)
+# 
+# ./run.sh track --video data/videos/Iron_Dome.mp4 --weights models/missile.pt
+# ./run.sh track --video data/videos/Iron_Dome.mp4 --weights models/yolo26n_custom.pt
+# ./run.sh track --video data/videos/NIGHT@.mp4
+# ./run.sh track --video data/videos/IRAN!1.mp4
