@@ -83,8 +83,8 @@ chmod +x setup.sh run.sh
 👉 **Best for:** Quick demo of all 4 OS components
 
 **Option B: Missile Tracker with Demo Video (5 min)**
-- **Windows:** `.\run.bat track --video data\videos\Iron_Dome.mp4 --auto-night`
-- **macOS/Linux:** `./run.sh track --video data/videos/Iron_Dome.mp4 --auto-night`
+- **Windows:** `.\run.bat track --video 'data\videos\Iron_Dome.mp4'`
+- **macOS/Linux:** `./run.sh track --video 'data/videos/Iron_Dome.mp4'`
 👉 **Best for:** See real-time detection & tracking
 
 **Option C: Live from Webcam**
@@ -533,7 +533,7 @@ cd missile-detection-static-main
 .\run.bat download-data
 
 # 4. Run tracker
-.\run.bat track --video data\videos\Iron_Dome.mp4
+.\run.bat track --video 'data\videos\Iron_Dome.mp4'
 ```
 
 ### **macOS Setup**
@@ -555,7 +555,7 @@ chmod +x setup.sh run.sh
 ./run.sh download-data
 
 # 6. Run tracker (note: first run slower on macOS due to GPU initialization)
-./run.sh track --video data/videos/Iron_Dome.mp4
+./run.sh track --video 'data/videos/Iron_Dome.mp4'
 ```
 
 **macOS Specific Tips:**
@@ -583,7 +583,7 @@ chmod +x setup.sh run.sh
 ./run.sh download-data
 
 # 6. Run tracker
-./run.sh track --video data/videos/Iron_Dome.mp4
+./run.sh track --video 'data/videos/Iron_Dome.mp4'
 ```
 
 **Linux-Specific Tips:**
@@ -870,7 +870,7 @@ Once happy with results:
 cp runs/detect/missile_yolo26_custom/weights/best.pt models/my_detector.pt
 
 # Use it in tracker
-python src/missile_tracker.py --model models/my_detector.pt --video data/videos/Iron_Dome.mp4
+python src/missile_tracker.py --weights models/my_detector.pt --video 'data/videos/Iron_Dome.mp4'
 ```
 
 #### **Option 2: Use in Your Code**

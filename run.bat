@@ -153,10 +153,10 @@ echo    YOLO = missile detected by shape model
 echo    IR   = missile detected by IR exhaust / dim-dot tracking
 
 REM Quick-launch (remove leading REM to activate):
-REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\missile.pt
-REM .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\yolo26n_custom.pt
-REM .\run.bat track --video data\videos\NIGHT@.mp4
-REM .\run.bat track --video data\videos\IRAN!1.mp4
+REM .\run.bat track --video 'data\videos\Iron_Dome.mp4' --weights models\missile.pt
+REM .\run.bat track --video 'data\videos\Iron_Dome.mp4' --weights models\yolo26n_custom.pt
+REM .\run.bat track --video 'data\videos\NIGHT@.mp4'
+REM .\run.bat track --video 'data\videos\IRAN!1.mp4'
 
 :download_data
 echo [ACTION] Downloading tactical missile dataset...
