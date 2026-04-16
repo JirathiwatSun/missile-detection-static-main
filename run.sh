@@ -68,6 +68,17 @@ case "$1" in
 
         shift # Remove 'track' from arguments
         
+        # Strip leading/trailing quotes from arguments (support both quoted and unquoted paths)
+        declare -a CLEAN_ARGS
+        for arg in "$@"; do
+            # Remove single and double quotes from beginning and end
+            arg="${arg%\'}"  # Remove trailing single quote
+            arg="${arg#\'}"  # Remove leading single quote
+            arg="${arg%\"}"  # Remove trailing double quote
+            arg="${arg#\"}"  # Remove leading double quote
+            CLEAN_ARGS+=("$arg")
+        done
+        
         # Run python script with all configured flags
         $PYTHON src/missile_tracker.py \
             --weights             "$WEIGHTS" \
@@ -109,7 +120,7 @@ case "$1" in
             --below-ground-conf   "$BELOW_GROUND_CONF" \
             --yolo-below-ground-conf "$YOLO_GROUND_CONF" \
             --device              "$DEVICE" \
-            "$@" # Forward remaining arguments
+            "${CLEAN_ARGS[@]}" # Forward remaining arguments (quotes stripped)
         ;;
     train)
         echo "[ACTION] Starting YOLO26 Training on Custom Dataset..."
