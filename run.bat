@@ -55,6 +55,13 @@ for %%x in (%*) do (
 )
 
 for /f "tokens=1,* delims= " %%a in ("%*") do set REMAINING=%%b
+
+REM Strip leading/trailing quotes from arguments (support both quoted and unquoted paths)
+if defined REMAINING (
+    set "REMAINING=%REMAINING:'=%"
+    set "REMAINING=%REMAINING:"=%"
+)
+
 %PYTHON% src\missile_tracker.py ^
     --weights             "%WEIGHTS%" ^
     --conf                "%CONF%" ^
