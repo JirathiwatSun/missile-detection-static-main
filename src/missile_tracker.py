@@ -1645,10 +1645,9 @@ def run(source, weights: str, conf: float, show_window: bool,
                     name="Telemetry_Update"
                 )
             
-            # Update status line on same line (every 5 frames to reduce clutter)
-            if frame_idx % 5 == 0:
-                sys.stdout.write(f"\r[FPS: {fps:>5.1f}] | Target Hits: {missile_count} | Detections Lock Contentions: {detections_lock.stats['reads'].contentions + detections_lock.stats['writes'].contentions}          ")
-                sys.stdout.flush()
+            # Update status line - overwrites same line with carriage return
+            sys.stdout.write(f"\r[FPS: {fps:>5.1f}] | Target Hits: {missile_count} | Detections Lock Contentions: {detections_lock.stats['reads'].contentions + detections_lock.stats['writes'].contentions}          ")
+            sys.stdout.flush()
     
 
             if show_window:
