@@ -18,6 +18,15 @@ import time
 import sys
 import os
 from pathlib import Path
+import collections
+import queue
+import math
+import threading
+import json
+import struct
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+from scipy.spatial import KDTree
 
 # Add project root to sys.path to allow running this file directly
 root_dir = str(Path(__file__).resolve().parent.parent)
@@ -32,8 +41,15 @@ from scipy.optimize import linear_sum_assignment
 from scipy.spatial import KDTree
 import threading
 import json
+import struct
 if os.name == 'nt':
     import winsound
+    import ctypes
+    from ctypes import wintypes
+    winmm = ctypes.WinDLL('winmm')
+    mciSendString = winmm.mciSendStringW
+    mciSendString.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.UINT, wintypes.HANDLE]
+    mciSendString.restype = wintypes.BOOL
 
 # ─ OS COMPONENTS INTEGRATION ─
 from src.os_synchronization import Mutex, RWLock, ConditionVariable
@@ -388,6 +404,58 @@ def apply_nvg_display(frame):
     step = max(2, int(h / 360))
     nvg[::step, :] = (nvg[::step, :] * 0.4).astype(np.uint8)
     return nvg
+    
+def create_beep_buffer(freq: float, duration_ms: int) -> bytes:
+    """Generates a RIFF/WAVE mono 16-bit square-wave beep."""
+    sample_rate = 22050
+    bits_per_sample = 16
+    num_samples = int(sample_rate * (duration_ms / 1000.0))
+    # 16-bit square wave (amplitude 24000)
+    samples = []
+    period = sample_rate / freq
+    for i in range(num_samples):
+        val = 24000 if (i % period < period / 2) else -24000
+        samples.append(val)
+    
+    data = struct.pack('<' + 'h' * len(samples), *samples)
+    header = struct.pack('<4sI4s4sIHHIIHH4sI', 
+                        b'RIFF', 36 + len(data), b'WAVE', 
+                        b'fmt ', 16, 1, 1, sample_rate, 
+                        sample_rate * 2, 2, bits_per_sample, 
+                        b'data', len(data))
+    return header + data
+
+def mci_run(command):
+    if os.name != 'nt': return
+    # Normalize slashes and push to worker queue so OPEN happens in same thread as PLAY
+    safe_cmd = command.replace('\\', '/')
+    audio_queue.put(("SETUP", safe_cmd))
+
+# ── NON-BLOCKING AUDIO WORKER ──
+audio_queue = queue.Queue()
+
+def mci_worker():
+    """Background worker that handles MCI commands to prevent main loop blocking."""
+    while True:
+        try:
+            item = audio_queue.get(timeout=1.0)
+            if item == "STOP": break
+            tag, command = item
+            res = mciSendString(command, None, 0, None)
+            if res != 0:
+                print(f"\n[MCI ERROR] MCI Action '{tag}' failed: {command} (Code: {res})")
+            audio_queue.task_done()
+        except queue.Empty:
+            continue
+
+# Start the worker thread
+if os.name == 'nt':
+    threading.Thread(target=mci_worker, name="AudioWorker", daemon=True).start()
+
+def mci_play(alias):
+    if os.name != 'nt': return
+    # Offload to worker queue instantly
+    audio_queue.put(("PLAY", f"play {alias} from 0"))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -605,7 +673,7 @@ class MissileTrail:
 def draw_detection(frame, x1, y1, x2, y2, label, confidence,
                    is_missile: bool, night_mode: bool, frame_idx: int,
                    tid: int, ui_scale: float, dx: float = 0.0, dy: float = 0.0,
-                   source: str = "yolo", in_ring: bool = False):
+                   source: str = "yolo", in_ring: bool = False, coasting: bool = False):
     
     # Establish Typography & Line Hierarchy (Thick Corners, Thin Data)
     lw_fine = 1            # Crisp thin lines for telemetry/data
@@ -720,9 +788,29 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
     # 4. Military Telemetry Block  ─────────────────────────────────────────────
     tgt_id = f"TGT-{tid:03d} [LOCKED]" if in_ring else f"TARGET-{tid:03d}"
     w_box = x2 - x1
-    rng_km = max(0.5, 2000.0 / (w_box + 1e-5))           
-    alt_m  = max(100.0, (frame.shape[0] - y2) * 18.5)    
-    spd_ms = 450 + (tid * 13) % 200                      
+    # --- DYNAMIC TELEMETRY ENGINE ---
+    px_speed = math.hypot(dx, dy)
+    
+    # 1. ALTITUDE: Derived from Y-pos + vertical velocity bias
+    base_alt = (frame.shape[0] - y2) * 22.5 
+    climb_bias = -dy * 15.0 # pixels/frame -> altitude bias
+    alt_jitter = (hash(f"alt-{tid}-{frame_idx//4}") % (15 if coasting else 5)) - 7
+    alt_m = max(100.0, base_alt + climb_bias + alt_jitter)
+
+    # 2. SPEED: Derived from displacement velocity + classification base
+    base_spd = 600 if (is_missile or source == "flame") else 120
+    move_spd = px_speed * 42.5 # Pixels/frame -> M/S heuristic
+    spd_jitter = (hash(f"spd-{tid}-{frame_idx//3}") % (22 if coasting else 6)) - 11
+    spd_ms = int(base_spd + move_spd + spd_jitter)
+    if spd_ms < 0: spd_ms = 0
+    
+    # 3. RANGE: Derived from box width + signal jitter
+    base_rng = max(0.5, 2000.0 / (w_box + 1e-5))
+    # Procedural range oscillation (simulates atmospheric/sensor fluctuations)
+    rng_jitter = (hash(f"rng-{tid}-{frame_idx//5}") % 100) / 400.0 # 0.0 to 0.25 KM
+    if coasting: rng_jitter *= 4.0 # More unstable when coasting
+    rng_km = max(0.1, base_rng + rng_jitter - (0.12 if not coasting else 0.5))
+    # -------------------------------
     
     f_sc = 0.35 * ui_scale
     
@@ -1022,6 +1110,28 @@ def run(source, weights: str, conf: float, show_window: bool,
     static_filter = StaticLightFilter(static_grid, static_world_thresh, static_cam_thresh, static_decay)
     class_names = model.names
 
+    # Pre-generate tactical audio buffers and persist to temp files for stable async playback
+    # This avoids "RuntimeError: Cannot play asynchronously from memory" on some Windows systems.
+    scratch_dir = os.path.join(BASE_DIR, "scratch")
+    if not os.path.exists(scratch_dir): os.makedirs(scratch_dir)
+    
+    path_init = os.path.join(scratch_dir, "snd_init.wav")
+    path_lock = os.path.join(scratch_dir, "snd_lock.wav")
+    path_track = os.path.join(scratch_dir, "snd_track.wav")
+    path_ui = os.path.join(scratch_dir, "snd_ui.wav")
+    
+    with open(path_init, "wb") as f: f.write(create_beep_buffer(1600, 80))
+    with open(path_lock, "wb") as f: f.write(create_beep_buffer(2400, 100))
+    with open(path_track, "wb") as f: f.write(create_beep_buffer(1100, 45))
+    with open(path_ui, "wb") as f: f.write(create_beep_buffer(2100, 25)) # Sharp UI click
+
+    # Register MCI aliases for parallel playback
+    if os.name == 'nt':
+        mci_run(f"open \"{path_init}\" alias init")
+        mci_run(f"open \"{path_lock}\" alias lock")
+        mci_run(f"open \"{path_track}\" alias track")
+        mci_run(f"open \"{path_ui}\" alias ui")
+
     if isinstance(source, int) or str(source).isdigit():
         if os.name == 'nt': cap = cv2.VideoCapture(int(source), cv2.CAP_DSHOW)
         else: cap = cv2.VideoCapture(int(source))
@@ -1148,30 +1258,34 @@ def run(source, weights: str, conf: float, show_window: bool,
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
     annotated = None
+    last_ui_key = 0xFF
     try:
         while True:
             key = cv2.waitKey(1) & 0xFF if show_window else 0xFF
+            
+            # Debounced UI Feedback: Only trigger on initial press
+            if key != 0xFF and key != last_ui_key:
+                mci_play("ui")
+            last_ui_key = key
+            
             if key == ord("q"):
-                if os.name == 'nt': winsound.Beep(800, 200) # Abort: Low descending tone
+                if os.name == 'nt': 
+                    # Use Beep for abort sequence as it is inherently distinctive
+                    threading.Thread(target=lambda: winsound.Beep(800, 200), daemon=True).start()
                 break
             if key == ord("p"):
                 paused = not paused
-                if os.name == 'nt': winsound.Beep(1400 if paused else 1600, 80) # Pause/Resume
             manual_toggle_triggered = False
             if key == ord("n"):
                 if sensor_state == "auto":
                     sensor_state = "force_night"
-                    if os.name == 'nt': winsound.Beep(1000, 100)
                 elif sensor_state == "force_night":
                     sensor_state = "force_day"
-                    if os.name == 'nt': winsound.Beep(1200, 100)
                 else:
                     sensor_state = "auto"
-                    if os.name == 'nt': winsound.Beep(1400, 100)
                 manual_toggle_triggered = True
                 
             if key == ord("f"):
-                if os.name == 'nt': winsound.Beep(2000, 50) # Optics Filter Switch
                 filters = ["thermal", "nvg", "original"] if night_mode else ["thermal", "original"]
                 idx = (filters.index(display_filter) + 1) % len(filters) if display_filter in filters else 0
                 display_filter = filters[idx]
@@ -1180,14 +1294,11 @@ def run(source, weights: str, conf: float, show_window: bool,
             if key == ord("w"): 
                 current_ground_frac = max(0.1, current_ground_frac - 0.05)
                 is_auto_ground = False
-                if os.name == 'nt': winsound.Beep(1200, 50) # Manual Override Feedback
             if key == ord("s"): 
                 current_ground_frac = min(1.0, current_ground_frac + 0.05)
                 is_auto_ground = False
-                if os.name == 'nt': winsound.Beep(1200, 50) # Manual Override Feedback
             if key == ord("g"):
                 is_auto_ground = not is_auto_ground
-                if os.name == 'nt': winsound.Beep(1500, 100) # Toggle Auto/Manual
             if key == ord("c") and annotated is not None:
                 p = os.path.join(BASE_DIR, f"screenshot_{int(time.time())}.png")
                 cv2.imwrite(p, annotated)
@@ -1418,6 +1529,39 @@ def run(source, weights: str, conf: float, show_window: bool,
             with tracker_lock:
                 active_hits = trail_yolo.update(final_hits)
             
+            # ── AUDIO LATENCY COMPENSATION ──
+            # Trigger audio early to compensate for OS/Driver delay (~50-100ms)
+            if os.name == 'nt' and active_hits:
+                # Pre-calculate status flags for audio logic
+                h_fr, w_fr = frame.shape[:2]
+                ring_r = int(220 * ui_scale)
+                cx_fr, cy_fr = w_fr // 2, h_fr // 2
+                
+                for hit in active_hits:
+                    bx, by, bw, bh = hit["box"]
+                    hit_cx, hit_cy = bx + bw // 2, by + bh // 2
+                    hit["in_ring"] = math.hypot(hit_cx - cx_fr, hit_cy - cy_fr) <= ring_r
+                    hit["is_missile"] = is_missile_class(hit.get("label", "")) or hit.get("source") == "flame"
+
+                # 1. INIT TRACK: Acquisition Chirp
+                new_ids = [h for h in active_hits if h["tid"] not in announced_tids]
+                if new_ids:
+                    for h in new_ids: announced_tids.add(h["tid"])
+                    sys.stdout.write(" [AUDIO] -> init"); sys.stdout.flush()
+                    mci_play("init")
+                
+                # 2. LOCK SOUND: Tactical Alert (High-priority lock-on)
+                elif any(h.get("in_ring") and h.get("is_missile") for h in active_hits):
+                    if frame_idx % 8 == 0:
+                        sys.stdout.write(" [AUDIO] -> lock"); sys.stdout.flush()
+                        mci_play("lock")
+
+                # 3. TRACKING: Situation Awareness Ping
+                elif any(h.get("is_missile") for h in active_hits):
+                    if frame_idx % 15 == 0:
+                        sys.stdout.write("."); sys.stdout.flush()
+                        mci_play("track")
+            
             # ── OS FILE MANAGER: Log detections ──
             if final_hits and detection_log_fd is not None:
                 frame_count += 1
@@ -1457,28 +1601,7 @@ def run(source, weights: str, conf: float, show_window: bool,
             active_tids = {h["tid"] for h in active_hits}
             announced_tids &= active_tids
 
-            # --- TACTICAL AUDIO FEEDBACK SYSTEM ---
-            if os.name == 'nt' and missile_count > 0:
-                new_locks = [h for h in active_hits if h["tid"] not in announced_tids]
-                
-                if new_locks:
-                    # INITIAL ACQUISITION (Triple-Rise Sequence)
-                    for h in new_locks: announced_tids.add(h["tid"])
-                    def lock_sound():
-                        for freq in [1500, 2000, 2500]:
-                            winsound.Beep(freq, 100)
-                    threading.Thread(target=lock_sound, daemon=True).start()
-                
-                elif frame_idx % 15 == 0:
-                    # CONTINUOUS TRACKING (Source-Dependent Pulses)
-                    is_flame = any(h.get("source") == "flame" for h in active_hits)
-                    
-                    if is_flame:
-                        # IR Detection: Low-pitch Blip (1300Hz)
-                        threading.Thread(target=lambda: winsound.Beep(1300, 50), daemon=True).start()
-                    else:
-                        # YOLO Detection: Tactical Ping (1800Hz)
-                        threading.Thread(target=lambda: winsound.Beep(1800, 80), daemon=True).start()
+
     
             # ── OS SYNCHRONIZATION: Frame Buffer Lock ──
             # Use a mutex to protect the image buffer during tactical HUD overlay rendering
@@ -1493,11 +1616,15 @@ def run(source, weights: str, conf: float, show_window: bool,
                     hit_cy = by + bh // 2
                     target_in_ring = math.hypot(hit_cx - cx_fr, hit_cy - cy_fr) <= ring_r
 
-                    is_missile_hit = is_missile_class(hit.get("label", "")) or hit.get("source") == "flame"
+                    # Pre-calculated in Audio Latency Compensation block
+                    is_missile_hit = hit["is_missile"]
+                    target_in_ring = hit["in_ring"]
+
                     draw_detection(display, bx, by, bx+bw, by+bh, hit["label"], hit["confidence"],
                                    is_missile_hit, night_mode, frame_idx, hit["tid"], ui_scale,
                                    dx=hit.get("dx", 0.0), dy=hit.get("dy", 0.0),
-                                   source=hit["source"], in_ring=target_in_ring)
+                                   source=hit["source"], in_ring=target_in_ring,
+                                   coasting=hit.get("coasting", False))
         
                 trail_yolo.draw(display, night_mode, ui_scale)
             
@@ -1521,6 +1648,7 @@ def run(source, weights: str, conf: float, show_window: bool,
             sys.stdout.write(f"\r[FPS: {fps:>5.1f}] | Target Hits: {missile_count} | Detections Lock Contentions: {detections_lock.stats['reads'].contentions + detections_lock.stats['writes'].contentions}")
             sys.stdout.flush()
     
+
             if show_window:
                 annotated = draw_hud(display, active_hits, fps, paused, night_mode, sensor_state, display_filter, frame_idx, brightness, threat, ui_scale, current_ground_frac, is_auto_ground)
                 cv2.imshow("Iron Dome Missile Tracker v3", cv2.resize(annotated, (1280, 720)) if w_orig > 1920 else annotated)
