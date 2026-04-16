@@ -10,7 +10,7 @@ Welcome to the **Iron Dome Missile Tracker v3** - a production-ready system comb
 
 ## 📋 **FINAL SUBMISSION (May 3-5, 2026)** 
 
-🎯 **Final Report:** [FINAL_REPORT_682_ITCS225.md](./FINAL_REPORT_682_ITCS225.md) - Complete grading rubric alignment (8,000+ words)  
+🎯 **Final Report:** [Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md](./Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md) - Complete grading rubric alignment (8,000+ words)  
 📖 **Documentation Hub:** [docs/0_INDEX.md](./docs/0_INDEX.md) - Consolidated navigation (4 master documents)  
 🧪 **Testing Instructions:** [docs/2_TESTING.md](./docs/2_TESTING.md) - Copy-paste test commands with expected outputs  
 🎤 **Presentation Guide:** [docs/3_PRESENTATION.md](./docs/3_PRESENTATION.md) - 5-minute script, live demo walkthrough, Q&A  
@@ -168,7 +168,7 @@ After setup, choose your learning path based on time and goals:
 4. Review Q&A section in [docs/3_PRESENTATION.md](./docs/3_PRESENTATION.md) (10 min)
 
 ### 📊 **Path E: For Grading/Evaluation**
-1. [FINAL_REPORT_682_ITCS225.md](./FINAL_REPORT_682_ITCS225.md) - Complete rubric alignment (30 min)
+1. [Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md](./Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md) - Complete rubric alignment (30 min)
 2. [docs/3_PRESENTATION.md](./docs/3_PRESENTATION.md) - Presentation & Q&A section (15 min)
 3. Run tests: [docs/2_TESTING.md](./docs/2_TESTING.md) (20 min)
 
@@ -222,7 +222,7 @@ missile-detection-static-main/
 ### 📄 **Final Report**
 | Document | Purpose | Sections | Status |
 |----------|---------|----------|--------|
-| [FINAL_REPORT_682_ITCS225.md](./FINAL_REPORT_682_ITCS225.md) | **Complete final report** for 682 ITCS 225 course submission | 8 sections covering all grading criteria | ✅ Ready for submission |
+| [Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md](./Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md) | **Complete final report** for ITCS 225 Principles of Operating Systems course submission | 8 sections covering all grading criteria | ✅ Ready for submission |
 
 **What's covered:**
 - ✅ OS Implementation Correctness (30%) - Grade 4 (Excellent)

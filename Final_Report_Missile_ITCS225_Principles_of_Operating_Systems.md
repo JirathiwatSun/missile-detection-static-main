@@ -1,7 +1,8 @@
-# 682 ITCS 225 - Operating Systems
-## Final Project Report: Iron Dome Missile Tracker v3.1
+# Final_Report_Missile_ITCS225_Principles of Operating Systems
+## Iron Dome Missile Tracker v3.1 - Final Project Report
 
 **Student:** [Your Name]  
+**Course:** ITCS 225 - Principles of Operating Systems  
 **Submission Date:** May 3-5, 2026  
 **Project:** Real-time Missile Detection System with Integrated OS Components  
 **Grading Criteria:** OS Implementation (30%), System Calls (20%), Performance (20%), Presentation (30%)
