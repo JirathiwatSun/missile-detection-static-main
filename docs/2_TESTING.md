@@ -740,7 +740,11 @@ Test 3: Check file statistics
 Test the entire system with all OS components working together:
 
 ```bash
-python demo_os_features.py
+# Windows:
+.venv\Scripts\python demo_os_features.py
+
+# macOS/Linux:
+./.venv/bin/python demo_os_features.py
 ```
 
 **Duration:** 3-5 minutes

@@ -10,14 +10,18 @@
 
 ### For Students/Developers
 1. **Setup & Quick Start** → [1_TECHNICAL.md](./1_TECHNICAL.md) - Section "Getting Started"
-2. **Run Demo** → Open terminal and run: `python demo_os_features.py`
+2. **Run Demo** → Open terminal and run:
+   - **Windows:** `.venv\Scripts\python demo_os_features.py`
+   - **macOS/Linux:** `./.venv/bin/python demo_os_features.py`
 3. **Learn Components** → [1_TECHNICAL.md](./1_TECHNICAL.md) - "OS Components" section
 4. **Test It** → [2_TESTING.md](./2_TESTING.md)
 5. **Prepare Presentation** → [3_PRESENTATION.md](./3_PRESENTATION.md)
 
 ### For Evaluators/Graders
 1. **Grading Rubric Alignment** → [3_PRESENTATION.md](./3_PRESENTATION.md) - "Grading Rubric" section
-2. **View Evidence** → Run: `python src/missile_tracker.py --video data/videos/Iron_Dome.mp4 --show-stats`
+2. **View Evidence** → Run:
+   - **Windows:** `.venv\Scripts\python src\missile_tracker.py --video data\videos\Iron_Dome.mp4 --show-stats`
+   - **macOS/Linux:** `./.venv/bin/python src/missile_tracker.py --video data/videos/Iron_Dome.mp4 --show-stats`
 3. **Q&A Responses** → [3_PRESENTATION.md](./3_PRESENTATION.md) - "Q&A by Criterion" section
 4. **Complete Testing** → [2_TESTING.md](./2_TESTING.md)
 
@@ -83,9 +87,13 @@ Sections:
 4. Present → [3_PRESENTATION.md](./3_PRESENTATION.md#5-minute-presentation)
 
 ### Quick Commands
-- **See all components**: `python demo_os_features.py`
+- **See all components**: 
+  - Windows: `.venv\Scripts\python demo_os_features.py`
+  - macOS/Linux: `./.venv/bin/python demo_os_features.py`
 - **Test sync**: See [2_TESTING.md - Individual Tests](./2_TESTING.md)
-- **Full demo with metrics**: `python src/missile_tracker.py --video data/videos/Iron_Dome.mp4 --show-stats`
+- **Full demo with metrics**:
+  - Windows: `.venv\Scripts\python src\missile_tracker.py --video data\videos\Iron_Dome.mp4 --show-stats`
+  - macOS/Linux: `./.venv/bin/python src/missile_tracker.py --video data/videos/Iron_Dome.mp4 --show-stats`
 
 ### System Components
 - **Synchronization** → [1_TECHNICAL.md - Synchronization](./1_TECHNICAL.md)

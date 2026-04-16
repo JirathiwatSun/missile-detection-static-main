@@ -45,7 +45,11 @@ print('✅ All OS components imported successfully')
 
 **See everything working:**
 ```bash
-python demo_os_features.py
+# Windows:
+.venv\Scripts\python demo_os_features.py
+
+# macOS/Linux:
+./.venv/bin/python demo_os_features.py
 ```
 
 Expected runtime: 3-5 minutes showing all components in action.

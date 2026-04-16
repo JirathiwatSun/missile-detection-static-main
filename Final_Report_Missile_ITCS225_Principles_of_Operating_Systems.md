@@ -1475,12 +1475,20 @@ Source Code:
 
 **Quick Start (5 minutes):**
 ```bash
-python demo_os_features.py
+# Windows:
+.venv\Scripts\python demo_os_features.py
+
+# macOS/Linux:
+./.venv/bin/python demo_os_features.py
 ```
 
 **Full System Demo (3-5 minutes):**
 ```bash
-python -m src.missile_tracker --video data/videos/sample.mp4 --show-stats
+# Windows:
+.venv\Scripts\python -m src.missile_tracker --video data\videos\sample.mp4 --show-stats
+
+# macOS/Linux:
+./.venv/bin/python -m src/missile_tracker --video data/videos/sample.mp4 --show-stats
 ```
 
 **Individual Component Tests (20 minutes):**

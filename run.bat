@@ -144,11 +144,11 @@ echo    .\run.bat track --video data\videos\Iron_Dome.mp4 --conf 0.20
 echo    .\run.bat track --cam 0 --night --save
 echo.
 echo  Training:
-echo    run.bat train
+echo    .\run.bat train
 echo.
 echo  Data Management:
-echo    run.bat download-data                 (download Roboflow dataset)
-echo    run.bat track --download-data         (alternative download command)
+echo    .\run.bat download-data                 (download Roboflow dataset)
+echo    .\run.bat track --download-data         (alternative download command)
 echo.
 echo  Live window controls:
 echo    Q  Quit              P  Pause/Resume        N  Toggle Night/Day
