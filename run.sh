@@ -30,12 +30,12 @@ fi
 while IFS='=' read -r key value; do
     # Strip carriage returns and skip comments/empty lines
     key=$(echo "$key" | tr -d '\r' | xargs)
-    value=$(echo "$value" | tr -d '\r' | xargs)
+    value=$(echo "$value" | tr -d '\r')
     
     if [[ -n "$key" && ! "$key" =~ ^# ]]; then
         # Convert backslashes to forward slashes for path-like variables
         if [[ "$key" == "WEIGHTS" ]]; then
-            value=$(echo "$value" | tr '\\' '/')
+            value=$(echo "$value" | sed 's/\\/\//g')
         fi
         export "$key=$value"
     fi

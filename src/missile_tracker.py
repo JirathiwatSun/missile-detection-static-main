@@ -1432,9 +1432,6 @@ def run(source, weights: str, conf: float, show_window: bool,
                 
                 if frame_count % 100 == 0:
                     file_manager.fsync(detection_log_fd)  # Periodic fsync for durability
-                    # Free old memory blocks periodically to prevent unbounded growth
-                    if frame_count % 500 == 0:
-                        memory_manager.defragment()
                 
                 # Track memory usage for statistics
                 mem_stats = memory_manager.get_stats()
