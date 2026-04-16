@@ -68,7 +68,11 @@ python -c "import os; print('Project files:', len([f for f in os.listdir('.') if
 ### Fastest Way to Test All Components
 
 ```bash
-python demo_os_features.py
+# Windows:
+.venv\Scripts\python demo_os_features.py
+
+# macOS/Linux:
+./.venv/bin/python demo_os_features.py
 ```
 
 **Duration:** 3-5 minutes  
@@ -867,7 +871,12 @@ print('✅ File I/O test passed')
 ```bash
 # Ensure you're in the project root
 cd /path/to/missile-detection-static-main
-python demo_os_features.py
+
+# Windows:
+.venv\Scripts\python demo_os_features.py
+
+# macOS/Linux:
+./.venv/bin/python demo_os_features.py
 ```
 
 ### Problem: "ModuleNotFoundError: No module named 'cv2' (OpenCV)"

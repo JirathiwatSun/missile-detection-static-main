@@ -141,7 +141,7 @@ docs/
 
 After reading documentation:
 - [ ] Understand all 4 OS components
-- [ ] Can run `python demo_os_features.py` successfully
+- [ ] Can run `.venv\Scripts\python demo_os_features.py` (Windows) or `./.venv/bin/python demo_os_features.py` (macOS/Linux) successfully
 - [ ] Can explain system calls mapping
 - [ ] Can discuss trade-offs with measurements
 - [ ] Prepared for Q&A on grading criteria

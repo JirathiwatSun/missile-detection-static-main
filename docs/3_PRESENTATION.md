@@ -69,7 +69,8 @@ The result: A system that's both fast (60fps real-time) and reliable
 "Let me show you the system running. Watch the FPS counter—it stays 
 at 59-60fps throughout because our OS optimizations prevent slowdowns."
 
-[Run: python -m src.missile_tracker --video sample.mp4]
+[Run (Windows): .venv\Scripts\python -m src.missile_tracker --video sample.mp4]
+[Run (macOS/Linux): ./.venv/bin/python -m src.missile_tracker --video sample.mp4]
 
 "Here you see:
 - OS components initialize at startup
@@ -170,7 +171,10 @@ ls data/videos/
 # or copy a test video to test_video.mp4
 
 # 3. Test run to warm up (on your machine, not during presentation)
-python -m src.missile_tracker --video data/videos/sample.mp4
+# Windows:
+.venv\Scripts\python -m src.missile_tracker --video data\videos\sample.mp4
+# macOS/Linux:
+./.venv/bin/python -m src.missile_tracker --video data/videos/sample.mp4
 ```
 
 ### Running the Live Demo
@@ -178,7 +182,10 @@ python -m src.missile_tracker --video data/videos/sample.mp4
 **Command to execute:**
 
 ```bash
-python -m src.missile_tracker --video sample.mp4
+# Windows:
+.venv\Scripts\python -m src.missile_tracker --video sample.mp4
+# macOS/Linux:
+./.venv/bin/python -m src.missile_tracker --video sample.mp4
 ```
 
 **Expected output (first 30 seconds):**

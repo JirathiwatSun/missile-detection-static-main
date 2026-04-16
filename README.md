@@ -148,7 +148,9 @@ After setup, choose your learning path based on time and goals:
 ### 👨‍💻 **Path A: Quick Start (15 min)**
 1. [docs/0_INDEX.md](./docs/0_INDEX.md) - Navigation hub (5 min)
 2. [docs/1_TECHNICAL.md](./docs/1_TECHNICAL.md) - "Getting Started" section (5 min)
-3. Run demo: `python demo_os_features.py` (5 min)
+3. Run demo (5 min):
+   - **Windows:** `.venv\Scripts\python demo_os_features.py`
+   - **macOS/Linux:** `./.venv/bin/python demo_os_features.py`
 
 ### 🎓 **Path B: Complete Technical Understanding (60 min)**
 1. [docs/1_TECHNICAL.md](./docs/1_TECHNICAL.md) - All 4 OS components explained (30 min)
@@ -606,7 +608,9 @@ chmod +x setup.sh run.sh
 ## 🎯 Next Steps
 
 1. **First time?** Run `setup.bat` (Windows) or `./setup.sh` (macOS/Linux)
-2. **Want to see it work?** Run `python demo_os_features.py`
+2. **Want to see it work?** Run:
+   - **Windows:** `.venv\Scripts\python demo_os_features.py`
+   - **macOS/Linux:** `./.venv/bin/python demo_os_features.py`
 3. **Want to understand?** Read [docs/01_START_HERE_QUICK_5MIN.md](./docs/01_START_HERE_QUICK_5MIN.md)
 4. **Want full integration?** Read [docs/04_HOW_OS_INTEGRATES_TRACKER.md](./docs/04_HOW_OS_INTEGRATES_TRACKER.md)
 5. **Need to present?** Read [docs/08_PRESENTATION_CONTENT_GUIDE.md](./docs/08_PRESENTATION_CONTENT_GUIDE.md)
