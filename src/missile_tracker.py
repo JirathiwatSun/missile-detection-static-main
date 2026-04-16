@@ -1426,9 +1426,21 @@ def run(source, weights: str, conf: float, show_window: bool,
                 file_manager.write(detection_log_fd, (det_log_entry + "\n").encode('utf-8'))
                 
                 # ── OS MEMORY: Allocate blocks for detection metadata ──
-                # Each detection requires a telemetry buffer (simulates real OS buffer allocation)
-                detection_buffer_size = len(det_log_entry) * 2 + (len(final_hits) * 256)  # ~256 bytes per detection metadata
+                # Each detection requires a telemetry buffer. To demonstrate memory usage 
+                # effectively, we simulate a more substantial high-fidelity telemetry packet.
+                # Base 512KB + 256KB per detection (representing high-res trajectory data)
+                detection_buffer_size = 1024 * 512 + (len(final_hits) * 1024 * 256)
                 mem_block = memory_manager.allocate(detection_buffer_size, owner=f"frame_{frame_idx}_telemetry")
+                
+                # Use a sliding window for memory retention (simulates multi-stage processing)
+                if not hasattr(run, '_mem_history'): run._mem_history = collections.deque()
+                
+                # If window is at capacity, free the oldest block before adding new one
+                if len(run._mem_history) >= 5:
+                    oldest_block = run._mem_history.popleft()
+                    memory_manager.free(oldest_block)
+                
+                run._mem_history.append(mem_block)
                 
                 if frame_count % 100 == 0:
                     file_manager.fsync(detection_log_fd)  # Periodic fsync for durability
@@ -1538,6 +1550,7 @@ def run(source, weights: str, conf: float, show_window: bool,
         ["General", "Detections", f"{total_detections:>10}"],
         ["Memory", "Cap Peak (MB)", f"{memory_manager.get_summary()['peak_in_use_mb']:>9.2f}"],
         ["Memory", "Allocations", f"{memory_manager.get_summary()['num_allocations']:>10}"],
+        ["Memory", "Deallocations", f"{memory_manager.get_summary()['num_frees']:>10}"],
         ["Memory", "Defragmentations", f"{memory_manager.get_summary()['num_defragmentations']:>10}"],
         ["Scheduler", "Tasks Run", f"{scheduler.get_global_stats()['total_tasks_completed']:>10}"],
         ["Scheduler", "Throughput", f"{scheduler.get_global_stats()['throughput_tps']:>6.1f} tps"],
@@ -1546,6 +1559,7 @@ def run(source, weights: str, conf: float, show_window: bool,
         ["File I/O", "Log Name", f"{log_file_path:>10}"],
         ["File I/O", "IO Strategy", "BUFFERED + FSYNC"],
         ["File I/O", "Bytes Written", f"{file_manager.get_stats()['total_bytes_written']:>10}"],
+        ["File I/O", "Total Fsyncs", f"{file_manager.get_stats()['total_fsyncs']:>10}"],
     ]
 
     # Lock Statistics Sub-table
@@ -1617,7 +1631,9 @@ def run(source, weights: str, conf: float, show_window: bool,
     
     # Final Telemetry Persistence (using OS FileManager)
     if detection_log_fd is not None and file_manager:
-        file_manager.close(detection_log_fd)
+        # Check if FD is still open before closing to avoid warnings
+        if detection_log_fd in file_manager.open_files:
+            file_manager.close(detection_log_fd)
 
 
 def parse_args():
