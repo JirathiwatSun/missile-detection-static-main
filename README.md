@@ -54,9 +54,11 @@ chmod +x setup.sh run.sh
 
 ✅ This installs: Python 3 • Virtual environment (.venv) • PyTorch • OpenCV • YOLOv8 • All dependencies
 
-### 📥 Step 2: Download Dataset & Models (One Command - ~2 minutes)
+### 📥 Step 2: Download Dataset (Optional - Only for Training)
 
-**⚠️ IMPORTANT:** The dataset and pre-trained models are ignored by git (`.gitignore`). You must download them separately:
+**✅ Pre-trained models are already included in the repository!** You can run the tracker immediately.
+
+**📊 Dataset (Optional):** Only needed if you want to train or retrain the model:
 
 **Windows:**
 ```powershell
@@ -70,21 +72,16 @@ chmod +x setup.sh run.sh
 
 ✅ This downloads:
 - FINAL-MISSILES-2 dataset (9,206 labeled images)
-- Pre-trained YOLO26n weights
-- Alternative missile detection models
 
-💾 **Files downloaded to:**
-- `datasets/FINAL-MISSILES-2/` (training data)
-- `models/` (pre-trained weights)
+💾 **Downloaded to:** `datasets/FINAL-MISSILES-2/` (training data)
 
-**Alternative Download Command:**
-```powershell
-# Windows
-.\run.bat track --download-data
+**Skip this step if:**
+- ✅ You just want to **run the tracker** (models already included)
+- ✅ You don't plan to **train** or **retrain**
 
-# macOS/Linux
-./run.sh track --download-data
-```
+**Download if:**
+- 🔄 You want to **train your own model**
+- 🔧 You want to **experiment with the dataset**
 
 ### (START) Step 3: Run (Choose One)
 
