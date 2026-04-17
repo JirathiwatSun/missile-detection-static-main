@@ -144,7 +144,7 @@ chmod +x setup.sh && ./setup.sh
 .\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\yolo26n_custom.pt
 .\run.bat track --video data\videos\NIGHT@.mp4
 .\run.bat track --video data\videos\IRAN!1.mp4
-.\run.bat track --video data\videos\IRAN1.mp4
+.\run.bat track --video data\videos\IRAN!.mp4
 ```
 
 > [!NOTE]
