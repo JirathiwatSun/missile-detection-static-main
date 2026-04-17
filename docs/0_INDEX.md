@@ -21,7 +21,7 @@
 1. **Grading Rubric Alignment** → [3_PRESENTATION.md](./3_PRESENTATION.md) - "Grading Rubric" section
 2. **View Evidence** → Run:
    - **Windows:** `.venv\Scripts\python src\missile_tracker.py --video data\videos\Iron_Dome.mp4 --show-stats`
-   - **macOS/Linux:** `./.venv/bin/python src/missile_tracker.py --video data/videos/Iron_Dome.mp4 --show-stats`
+   - **macOS/Linux:** `./.venv/bin/python src/missile_tracker.py --video 'data/videos/Iron_Dome.mp4' --show-stats`
 3. **Q&A Responses** → [3_PRESENTATION.md](./3_PRESENTATION.md) - "Q&A by Criterion" section
 4. **Complete Testing** → [2_TESTING.md](./2_TESTING.md)
 
@@ -93,7 +93,7 @@ Sections:
 - **Test sync**: See [2_TESTING.md - Individual Tests](./2_TESTING.md)
 - **Full demo with metrics**:
   - Windows: `.venv\Scripts\python src\missile_tracker.py --video data\videos\Iron_Dome.mp4 --show-stats`
-  - macOS/Linux: `./.venv/bin/python src/missile_tracker.py --video data/videos/Iron_Dome.mp4 --show-stats`
+  - macOS/Linux: `./.venv/bin/python src/missile_tracker.py --video 'data/videos/Iron_Dome.mp4' --show-stats`
 
 ### System Components
 - **Synchronization** → [1_TECHNICAL.md - Synchronization](./1_TECHNICAL.md)

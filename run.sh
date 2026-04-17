@@ -132,11 +132,12 @@ case "$1" in
         ;;
     *)
         echo
+        echo " ⚠️  IMPORTANT: macOS REQUIRES quotes around video paths!"
         echo " Usage:"
-        echo "   ./run.sh track --video data/videos/video.mp4          (auto day/night)"
-        echo "   ./run.sh track --video data/videos/video.mp4 --night  (force night mode)"
-        echo "   ./run.sh track --video data/videos/video.mp4 --day    (force day mode)"
-        echo "   ./run.sh track --video data/videos/video.mp4 --save   (save output_tracked.mp4)"
+        echo "   ./run.sh track --video 'data/videos/video.mp4'        (auto day/night)"
+        echo "   ./run.sh track --video 'data/videos/video.mp4' --night (force night mode)"
+        echo "   ./run.sh track --video 'data/videos/video.mp4' --day  (force day mode)"
+        echo "   ./run.sh track --video 'data/videos/video.mp4' --save (save output_tracked.mp4)"
         echo "   ./run.sh track --cam 0 --night                        (webcam, night mode)"
         echo
         echo " All default values are configured in: config.cfg"
@@ -158,9 +159,9 @@ case "$1" in
         echo "   --no-window              Run headless (no display window)"
         echo
         echo " Examples:"
-        echo "   ./run.sh track --video data/videos/Iron_Dome.mp4"
-        echo "   ./run.sh track --video data/videos/Iron_Dome.mp4 --night --weights models/missile.pt"
-        echo "   ./run.sh track --video data/videos/Iron_Dome.mp4 --conf 0.20"
+        echo "   ./run.sh track --video 'data/videos/Iron_Dome.mp4'"
+        echo "   ./run.sh track --video 'data/videos/Iron_Dome.mp4' --night --weights models/missile.pt"
+        echo "   ./run.sh track --video 'data/videos/Iron_Dome.mp4' --conf 0.20"
         echo "   ./run.sh track --cam 0 --night --save"
         echo
         echo " Training:"
@@ -182,11 +183,11 @@ case "$1" in
 esac
 
 # Quick-launch (remove leading # to activate):
-# NOTE: run.sh automatically strips quotes, so both formats work:
-#   ./run.sh track --video data/videos/Iron_Dome.mp4              (recommended)
-#   ./run.sh track --video 'data/videos/Iron_Dome.mp4'            (also works)
+# NOTE: macOS REQUIRES quotes around file paths. Linux quotes are optional.
+#   ./run.sh track --video 'data/videos/Iron_Dome.mp4'              (macOS/Linux - RECOMMENDED)
+#   ./run.sh track --video data/videos/Iron_Dome.mp4                (Linux only - works without quotes)
 # 
-# ./run.sh track --video data/videos/Iron_Dome.mp4 --weights models/missile.pt
-# ./run.sh track --video data/videos/Iron_Dome.mp4 --weights models/yolo26n_custom.pt
-# ./run.sh track --video data/videos/NIGHT@.mp4
-# ./run.sh track --video data/videos/IRAN!1.mp4
+# ./run.sh track --video 'data/videos/Iron_Dome.mp4' --weights models/missile.pt
+# ./run.sh track --video 'data/videos/Iron_Dome.mp4' --weights models/yolo26n_custom.pt
+# ./run.sh track --video 'data/videos/NIGHT@.mp4'
+# ./run.sh track --video 'data/videos/IRAN!1.mp4'

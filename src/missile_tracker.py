@@ -837,7 +837,8 @@ def draw_detection(frame, x1, y1, x2, y2, label, confidence,
 def draw_hud(frame, active_hits: list, fps: float, paused: bool,
              night_mode: bool, sensor_state: str, display_filter: str,
              frame_idx: int, brightness: float, threat_level: str, 
-             ui_scale: float, ground_frac: float, is_auto_ground: bool):
+             ui_scale: float, ground_frac: float, is_auto_ground: bool,
+             recording_active: bool = False):
     
     h, w  = frame.shape[:2]
     hud_c = NIGHT_COLOUR_HUD if night_mode else DAY_COLOUR_HUD
@@ -947,6 +948,16 @@ def draw_hud(frame, active_hits: list, fps: float, paused: bool,
     time_str = time.strftime("%H:%M:%S", time.localtime())
     cv2.putText(frame, f"TIME: {time_str}Z", (x_r, y3), cv2.FONT_HERSHEY_SIMPLEX, f2, dim_c, font_th, cv2.LINE_AA)
 
+    # SAVE VIDEO INDICATOR
+    save_status = "RECORDING" if recording_active else "IDLE"
+    save_color = (0, 0, 255) if recording_active else dim_c  # Red if recording, dim if idle
+    if recording_active and (frame_idx // 10) % 2 == 0:  # Blinking effect
+        save_color = (0, 0, 255)
+    save_box_x = x_r + int(80 * ui_scale)
+    save_box_y = y1 - int(15 * ui_scale)
+    cv2.putText(frame, f"SAVE: {save_status}", (save_box_x, save_box_y), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.40 * ui_scale, save_color, font_th, cv2.LINE_AA)
+
     # 4. Bottom Bar (Threats - HIGH PRIORITY)
     b_height = int(60 * ui_scale)
     overlay2 = frame.copy()
@@ -972,7 +983,7 @@ def draw_hud(frame, active_hits: list, fps: float, paused: bool,
     count_c = (NIGHT_COLOUR_MISSILE if night_mode else DAY_COLOUR_MISSILE) if missile_count > 0 else dim_c
     cv2.putText(frame, f"ACTIVE MISSILE TRACKED: {missile_count:02d}", (int(270*ui_scale), h-int(20*ui_scale)), cv2.FONT_HERSHEY_SIMPLEX, threat_f, count_c, font_th_bold, cv2.LINE_AA)
 
-    shortcuts = "[Q] ABORT  [P] HALT  [N] OPTICS  [F] FILTER  [G] AUTO-G  [W/S] HORIZON  [C] CAPTURE"
+    shortcuts = "[Q] ABORT  [P] HALT  [N] OPTICS  [F] FILTER  [G] AUTO-G  [W/S] HORIZON  [C] CAPTURE  [R] RECORD"
     font_scale = 0.40 * ui_scale
     (text_width, _), _ = cv2.getTextSize(shortcuts, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_th)
     cv2.putText(frame, shortcuts, (w - text_width - int(20 * ui_scale), h - int(25 * ui_scale)), 
@@ -1083,6 +1094,21 @@ def run(source, weights: str, conf: float, show_window: bool,
         flash_thresh: float, flash_cooldown_frames: int, max_horizon_rise: float,
         below_ground_conf: float, yolo_below_ground_conf: float) -> None:
 
+    # Enable ANSI escape codes on Windows for proper terminal output
+    # On Windows: Enable Virtual Terminal Processing via Windows Console API
+    # On macOS/Linux: ANSI codes work natively
+    if os.name == 'nt':
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+            mode = ctypes.c_ulong()
+            if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                mode.value |= 0x0004  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+                kernel32.SetConsoleMode(handle, mode)
+        except Exception:
+            pass  # Windows API not available or older Windows version
+
     try: from ultralytics import YOLO
     except ImportError: sys.exit("[ERROR] ultralytics not installed.")
 
@@ -1166,6 +1192,12 @@ def run(source, weights: str, conf: float, show_window: bool,
         fps_src = cap.get(cv2.CAP_PROP_FPS) or 30
         out_path = os.path.join(BASE_DIR, "output_tracked.mp4")
         writer   = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*"mp4v"), fps_src, (native_w, native_h))
+        if not writer or not writer.isOpened():
+            print(f"[WARNING] Failed to create video writer for {out_path}")
+            print(f"[WARNING] Try using a different codec or check disk space")
+            writer = None
+        else:
+            print(f"[INFO] Video writer initialized: {out_path} at {fps_src}fps")
 
     trail_yolo = MissileTrail(
         maxlen=trail_length, confirm_frames=track_confirm,
@@ -1228,6 +1260,7 @@ def run(source, weights: str, conf: float, show_window: bool,
 
     frame_idx, fps = 0, 0.0
     paused = False
+    recording_active = save_output  # Initialize recording state based on --save flag
     if force_night:
         sensor_state = "force_night"
     elif force_day:
@@ -1305,6 +1338,28 @@ def run(source, weights: str, conf: float, show_window: bool,
                 if os.name == 'nt': # Camera Shutter: 2 quick clicks
                     threading.Thread(target=lambda: [winsound.Beep(2500, 30), winsound.Beep(1800, 30)], daemon=True).start()
                 print(f"\n[SS] Captured Target Data: {p}")
+            
+            if key == ord("r"):
+                # Toggle recording on/off
+                recording_active = not recording_active
+                if recording_active:
+                    # Start recording - create a new VideoWriter
+                    if writer is None:
+                        fps_src = cap.get(cv2.CAP_PROP_FPS) or 30
+                        out_path = os.path.join(BASE_DIR, "output_tracked.mp4")
+                        writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*"mp4v"), fps_src, (native_w, native_h))
+                        if not writer or not writer.isOpened():
+                            print(f"[WARNING] Failed to create video writer for {out_path}")
+                            print(f"[WARNING] Try using a different codec or check disk space")
+                            writer = None
+                            recording_active = False
+                        else:
+                            print(f"[RECORD] Video recording started: {out_path}")
+                    else:
+                        print(f"[RECORD] Video recording resumed")
+                else:
+                    # Stop recording but keep writer for potential resume
+                    print(f"[RECORD] Video recording paused")
     
             if paused: time.sleep(0.05); continue
     
@@ -1547,19 +1602,16 @@ def run(source, weights: str, conf: float, show_window: bool,
                 new_ids = [h for h in active_hits if h["tid"] not in announced_tids]
                 if new_ids:
                     for h in new_ids: announced_tids.add(h["tid"])
-                    sys.stdout.write(" [AUDIO] -> init"); sys.stdout.flush()
                     mci_play("init")
                 
                 # 2. LOCK SOUND: Tactical Alert (High-priority lock-on)
                 elif any(h.get("in_ring") and h.get("is_missile") for h in active_hits):
                     if frame_idx % 8 == 0:
-                        sys.stdout.write(" [AUDIO] -> lock"); sys.stdout.flush()
                         mci_play("lock")
 
                 # 3. TRACKING: Situation Awareness Ping
                 elif any(h.get("is_missile") for h in active_hits):
                     if frame_idx % 15 == 0:
-                        sys.stdout.write("."); sys.stdout.flush()
                         mci_play("track")
             
             # ── OS FILE MANAGER: Log detections ──
@@ -1645,24 +1697,48 @@ def run(source, weights: str, conf: float, show_window: bool,
                     name="Telemetry_Update"
                 )
             
-            # Update status line - overwrites same line with carriage return
-            sys.stdout.write(f"\r[FPS: {fps:>5.1f}] | Target Hits: {missile_count} | Detections Lock Contentions: {detections_lock.stats['reads'].contentions + detections_lock.stats['writes'].contentions}          ")
-            sys.stdout.flush()
+            # Update status line using ANSI escape codes for cross-platform support
+            # Only output in interactive terminals (Windows, macOS, Linux) to avoid clutter when piped
+            if sys.stdout.isatty():
+                try:
+                    contentions = detections_lock.stats['reads'].contentions + detections_lock.stats['writes'].contentions
+                    
+                    # ANSI escape codes:
+                    # \033[2K = Clear entire line
+                    # \r     = Move cursor to line start (carriage return)
+                    # Works on: Windows 10+ (with VT Processing), macOS 10.3+, Linux
+                    status_line = f"\033[2K\r[FPS: {fps:>5.1f}] | Target Hits: {missile_count:>2d} | Detections Lock Contentions: {contentions:>4d}"
+                    sys.stdout.write(status_line)
+                    sys.stdout.flush()
+                except Exception:
+                    # Silently fail if ANSI codes not supported (shouldn't happen with VT processing)
+                    pass
     
 
             if show_window:
-                annotated = draw_hud(display, active_hits, fps, paused, night_mode, sensor_state, display_filter, frame_idx, brightness, threat, ui_scale, current_ground_frac, is_auto_ground)
+                annotated = draw_hud(display, active_hits, fps, paused, night_mode, sensor_state, display_filter, frame_idx, brightness, threat, ui_scale, current_ground_frac, is_auto_ground, recording_active)
                 cv2.imshow("Iron Dome Missile Tracker v3", cv2.resize(annotated, (1280, 720)) if w_orig > 1920 else annotated)
             else:
                 annotated = display
     
-            if writer: writer.write(annotated)
+            if writer and recording_active:
+                try:
+                    writer.write(annotated)
+                except Exception as e:
+                    print(f"[WARNING] Failed to write frame {frame_idx} to video: {e}")
 
     except Exception as e:
         print(f"\n[CRASH] System encountered an error: {e}")
         import traceback
         traceback.print_exc()
 
+    # Clear the status line
+    try:
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+    except Exception:
+        pass  # TTY not available
+    
     # ── OS COMPONENTS CLEANUP & TACTICAL SUMMARY ──
     TacticalDisplay.section("MISSION DEBRIEF: OS SUBSYSTEM PERFORMANCE", subtitle="Final analysis of kernel throughput and resource management.")
     
@@ -1751,8 +1827,19 @@ def run(source, weights: str, conf: float, show_window: bool,
 
     # Cleanup
     cap.release()
-    if writer: writer.release()
-    cv2.destroyAllWindows()
+    if writer:
+        writer.release()
+        # Verify output file was created
+        if os.path.exists(out_path):
+            file_size_mb = os.path.getsize(out_path) / (1024 * 1024)
+            print(f"[INFO] Output video saved: {out_path} ({file_size_mb:.2f}MB)")
+        else:
+            print(f"[WARNING] Output file not created: {out_path}")
+    try:
+        cv2.destroyAllWindows()
+    except cv2.error:
+        # Ignore OpenCV errors when no windows were created (--no-window mode)
+        pass
     
     # ── OS CONTENTION SIMULATOR: Cleanup ──
     monitor_running = False
