@@ -53,32 +53,6 @@ Contact: **Jirathiwat Suntipreedatham** (Bangkok, Thailand)
 
 ---
 
-## 🎬 In-Window Controls (While Running)
-
-| Key | Label | Description |
-|:---:|:---:|:---|
-| **Q** | **ABORT** | Safely shut down the tracking system. |
-| **P** | **HALT** | Pause the video feed to analyze a specific frame. |
-| **N** | **OPTICS** | Cycle through tactical states: **AUTO** → **FORCE NIGHT** → **FORCE DAY**. |
-| **F** | **FILTER** | Cycle through **Thermal (FLIR)** and **NVG** visual filters. |
-| **G** | **AUTO-G** | Toggle automatic horizon detection on/off. |
-| **W** | **HORIZON ↑** | Raise the ground exclusion horizon line (ignore more city lights). |
-| **S** | **HORIZON ↓** | Lower the ground exclusion horizon line. |
-| **C** | **CAPTURE** | Capture a high-resolution screenshot with HUD telemetry. |
-| **R** | **REC** | Toggle recording (**SAVE ON/OFF**) ✨ **NEW** |
-
-### **Real-Time Terminal Display**
-- **FPS Counter:** Updates live on single line (no row spam).
-- **Target Hits:** Running count of confirmed missile locks.
-- **Lock Contentions:** OS synchronization metric for lock operations.
-
-**Example Output:**
-```text
-[FPS:  65.4] | Target Hits:  2 | Lock Contentions:  35
-```
-
----
-
 ## 🚀 **QUICK START (5 minutes)**
 
 ### 1️⃣ Install Everything (One Command)
@@ -98,29 +72,38 @@ chmod +x setup.sh && ./setup.sh
 ### 2️⃣ Run a Demo (Choose One)
 
 **Option A: See OS Components in Action (3 min)** - Fastest way to verify everything works
-```bash
-# Windows
-.venv\Scripts\python demo_os_features.py
 
-# macOS/Linux
+**Windows:**
+```powershell
+.venv\Scripts\python demo_os_features.py
+```
+
+**macOS/Linux:**
+```bash
 ./.venv/bin/python demo_os_features.py
 ```
 
 **Option B: Live Missile Detection (5 min)** - See real-time AI detection
-```bash
-# Windows
-.venv\Scripts\python -m src.missile_tracker --video data\videos\Iron_Dome.mp4 --show-stats
 
-# macOS/Linux (⚠️ quotes REQUIRED on macOS)
+**Windows:**
+```powershell
+.venv\Scripts\python -m src.missile_tracker --video data\videos\Iron_Dome.mp4 --show-stats
+```
+
+**macOS/Linux:**
+```bash
 ./.venv/bin/python -m src.missile_tracker --video 'data/videos/Iron_Dome.mp4' --show-stats
 ```
 
 **Option C: Live Webcam (Real-time)** - Detect from your camera
-```bash
-# Windows
-.\run.bat track --cam 0 --night
 
-# macOS/Linux
+**Windows:**
+```powershell
+.\run.bat track --cam 0 --night
+```
+
+**macOS/Linux:**
+```bash
 ./run.sh track --cam 0 --night
 ```
 
@@ -129,13 +112,43 @@ chmod +x setup.sh && ./setup.sh
 ✅ **Pre-trained models are already included!** The tracker runs immediately.
 
 **If you want to train your own model:**
-```bash
-# Windows
-.\run.bat download-data
 
-# macOS/Linux
+**Windows:**
+```powershell
+.\run.bat download-data
+```
+
+**macOS/Linux:**
+```bash
 ./run.sh download-data
 ```
+
+---
+
+## ⚡ Quick-Launch Reference (Copy-Paste Ready)
+
+### **macOS / Linux**
+```bash
+./run.sh track --video 'data/videos/Iron_Dome.mp4'
+./run.sh track --video 'data/videos/Iron_Dome.mp4' --weights models/missile.pt
+./run.sh track --video 'data/videos/Iron_Dome.mp4' --weights models/yolo26n_custom.pt
+./run.sh track --video 'data/videos/NIGHT@.mp4'
+./run.sh track --video 'data/videos/IRAN!1.mp4'
+./run.sh track --video 'data/videos/IRAN!.mp4'
+```
+
+### **Windows (PowerShell/CMD)**
+```batch
+.\run.bat track --video data\videos\Iron_Dome.mp4
+.\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\missile.pt
+.\run.bat track --video data\videos\Iron_Dome.mp4 --weights models\yolo26n_custom.pt
+.\run.bat track --video data\videos\NIGHT@.mp4
+.\run.bat track --video data\videos\IRAN!1.mp4
+.\run.bat track --video data\videos\IRAN1.mp4
+```
+
+> [!NOTE]
+> **macOS Users:** Always ensure single quotes `'` surround file paths for reliable execution.
 
 ---
 
@@ -228,6 +241,18 @@ Follow [docs/2_TESTING.md](./docs/2_TESTING.md) for performance benchmarks and m
 
 ---
 
+## 🎬 Real-Time Controls
+
+| Key | Action | Description |
+|:---:|:---:|:---|
+| **Q** | **ABORT** | Safe shutdown. |
+| **P** | **HALT** | Toggle pause. |
+| **N** | **OPTICS** | Cycle Day/Night/Auto. |
+| **F** | **FILTER** | Cycle Thermal/NVG. |
+| **G** | **AUTO-G** | Toggle horizon detection. |
+| **W/S** | **HORIZON** | Adjust ground exclusion line. |
+| **C** | **CAPTURE** | Save HUD telemetry screenshot. |
+| **R** | **REC** | Toggle video recording. |
 
 ---
 
@@ -247,22 +272,116 @@ This project demonstrates production-grade implementation of:
 
 ---
 
+## 🧠 Training Your Own Model (Detailed Guide)
 
-## 🧠 Training Your Own Model
+Want to customize the detector for your own dataset or improve accuracy? Follow these steps:
 
-If you wish to customize the detector for a specific dataset:
+### **Phase 1: Prepare Your Dataset**
 
-1. **Prepare Data:** Use [Roboflow Universe](https://universe.roboflow.com/) to export data in YOLOv8 format to `datasets/`.
-2. **Configure:** Update `config.cfg` with your desired `epochs`, `batch_size`, and `img_size`.
-3. **Train:**
-   ```bash
-   # Windows
-   .\run.bat train
-   
-   # macOS/Linux
-   ./run.sh train
-   ```
-4. **Deploy:** Results are saved in `runs/detect/`. Copy the `best.pt` model to the `models/` directory for use.
+#### **Option A: Quick Start (Use Included Dataset)**
+The project includes a pre-downloaded dataset with 9,206 labeled images. If you haven't downloaded it yet:
+
+**Windows:**
+```powershell
+.\run.bat download-data
+```
+
+**macOS/Linux:**
+```bash
+./run.sh download-data
+```
+
+---
+
+### **Phase 2: Configure & Customize**
+
+Edit `config.cfg` to adjust these real-time training parameters:
+```ini
+[TRAINING]
+epochs=100
+batch_size=16
+img_size=640
+patience=20
+device=0
+```
+
+---
+
+### **Phase 3: Start Training**
+
+Execute the training pipeline locally:
+
+**Windows:**
+```powershell
+.\run.bat train
+```
+
+**macOS/Linux:**
+```bash
+./run.sh train
+```
+
+---
+
+### **Phase 4: Monitor & Performance Dashboard**
+
+### 📊 **Model Performance Dashboard**
+
+The current pre-trained model (`yolo26n_custom.pt`) was trained over 100 epochs. Below are the metrics achieved:
+
+| Metric | Accuracy Score |
+| :--- | :--- |
+| **Precision** | **85.0%** |
+| **Recall** | **76.9%** |
+| **mAP@50** | **83.9%** |
+
+#### **Model Metrics Gallery:**
+![Results Gallery](runs/detect/missile_yolo26_custom/results.png)
+*Combined training metrics (Loss, Precision, Recall, mAP) over time.*
+
+![Confusion Matrix](runs/detect/missile_yolo26_custom/confusion_matrix_normalized.png)
+*Normalized confusion matrix for pre-trained model.*
+
+👉 **For advanced analysis, open [docs/2_TESTING.md](./docs/2_TESTING.md)**
+
+---
+
+### **Phase 5: Deploy & Inference**
+
+Once training completes, copy the `best.pt` to the `models/` folder:
+
+**Windows:**
+```powershell
+copy runs\detect\missile_yolo26_custom\weights\best.pt models\my_detector.pt
+.\run.bat track --weights models\my_detector.pt --video data\videos\Iron_Dome.mp4
+```
+
+**macOS/Linux:**
+```bash
+cp runs/detect/missile_yolo26_custom/weights/best.pt models/my_detector.pt
+./run.sh track --weights models/my_detector.pt --video 'data/videos/Iron_Dome.mp4'
+```
+
+---
+
+### **Phase 6: Troubleshooting Training**
+
+| Problem | Solution |
+|---------|----------|
+| **Out of Memory** | Reduce `batch_size` to 8 or 4 in `config.cfg`. |
+| **Very slow training** | Ensure `device=0` is set to use your NVIDIA GPU. |
+| **Early Stopping** | Training stops if metrics don't improve (use `--patience 50` to extend). |
+
+---
+
+## 📁 Project Structure Explained
+
+*   **`src/`**: Core Source code (AI Engine + OS Subsystems).
+*   **`docs/`**: Master documentation suite and technical reports.
+*   **`models/`**: Pre-trained YOLO weights (`.pt`).
+*   **`data/`**: Sample tactical video footage.
+*   **`datasets/`**: Training data and validation sets.
+*   **`runs/`**: Training results, metrics, and logs.
 
 ---
 
