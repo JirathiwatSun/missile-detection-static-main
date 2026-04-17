@@ -53,6 +53,32 @@ Contact: **Jirathiwat Suntipreedatham** (Bangkok, Thailand)
 
 ---
 
+## 🎬 In-Window Controls (While Running)
+
+| Key | Label | Description |
+|:---:|:---:|:---|
+| **Q** | **ABORT** | Safely shut down the tracking system. |
+| **P** | **HALT** | Pause the video feed to analyze a specific frame. |
+| **N** | **OPTICS** | Cycle through tactical states: **AUTO** → **FORCE NIGHT** → **FORCE DAY**. |
+| **F** | **FILTER** | Cycle through **Thermal (FLIR)** and **NVG** visual filters. |
+| **G** | **AUTO-G** | Toggle automatic horizon detection on/off. |
+| **W** | **HORIZON ↑** | Raise the ground exclusion horizon line (ignore more city lights). |
+| **S** | **HORIZON ↓** | Lower the ground exclusion horizon line. |
+| **C** | **CAPTURE** | Capture a high-resolution screenshot with HUD telemetry. |
+| **R** | **REC** | Toggle recording (**SAVE ON/OFF**) ✨ **NEW** |
+
+### **Real-Time Terminal Display**
+- **FPS Counter:** Updates live on single line (no row spam).
+- **Target Hits:** Running count of confirmed missile locks.
+- **Lock Contentions:** OS synchronization metric for lock operations.
+
+**Example Output:**
+```text
+[FPS:  65.4] | Target Hits:  2 | Lock Contentions:  35
+```
+
+---
+
 ## 🚀 **QUICK START (5 minutes)**
 
 ### 1️⃣ Install Everything (One Command)
@@ -202,18 +228,6 @@ Follow [docs/2_TESTING.md](./docs/2_TESTING.md) for performance benchmarks and m
 
 ---
 
-## 🎬 Real-Time Controls
-
-| Key | Action | Description |
-|:---:|:---:|:---|
-| **Q** | **ABORT** | Safe shutdown. |
-| **P** | **HALT** | Toggle pause. |
-| **N** | **OPTICS** | Cycle Day/Night/Auto. |
-| **F** | **FILTER** | Cycle Thermal/NVG. |
-| **G** | **AUTO-G** | Toggle horizon detection. |
-| **W/S** | **HORIZON** | Adjust ground exclusion line. |
-| **C** | **CAPTURE** | Save HUD telemetry screenshot. |
-| **R** | **REC** | Toggle video recording. |
 
 ---
 
