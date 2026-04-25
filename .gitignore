@@ -21,6 +21,8 @@ models/*.pt
 # Project Specific
 scratch/
 detection_logs/
+demo_data/
+os_demo_data/
 output_tracked.mp4
 screenshot_*.png
 demo_output.txt
