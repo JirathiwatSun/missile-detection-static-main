@@ -6,7 +6,6 @@
 Welcome to the **Iron Dome Missile Tracker v3.1** - a production-ready system demonstrating practical applications of Operating Systems concepts in a high-performance real-time environment. This project integrates four major OS components (Synchronization, Memory Management, Task Scheduling, and File I/O) into a functional missile detection pipeline.
 
 ---
-
 ## ⚖️ License & Ownership
 **Copyright © 2026 Jirathiwat Suntipreedatham. All Rights Reserved.**
 
@@ -14,6 +13,9 @@ This project is **PROPRIETARY**. Unauthorized copying, distribution, or modifica
 Contact: **Jirathiwat Suntipreedatham** (Bangkok, Thailand)
 
 ---
+
+![alt text](data/images/image-1.png)
+![alt text](data/images/image.png)
 
 ## 📚 Course Submission - ITCS225 Principles of Operating Systems
 
@@ -51,6 +53,23 @@ Contact: **Jirathiwat Suntipreedatham** (Bangkok, Thailand)
 > [!IMPORTANT]
 > **Recommended Platform:** Windows 10/11 is the primary development platform and offers the most stable performance and simplest setup.
 
+
+
+## 📦 Data Source
+
+The missile detection model was trained on a curated dataset of labeled missile imagery hosted on Roboflow Universe.
+
+| Field | Details |
+|:------|:--------|
+| **Dataset** | Final Missiles |
+| **Platform** | Roboflow Universe |
+| **URL** | [universe.roboflow.com/qedwdqw/final-missiles](https://universe.roboflow.com/qedwdqw/final-missiles) |
+| **Images** | 9,206 labeled images |
+| **Task** | Object Detection |
+
+> [!NOTE]
+> The pre-trained weights (`yolo26n_custom.pt`) included in this repository were trained using this dataset. Running `download-data` via the CLI will fetch it automatically via the Roboflow API.
+
 ---
 
 ## 🚀 **QUICK START (5 minutes)**
@@ -83,47 +102,19 @@ chmod +x setup.sh && ./setup.sh
 ./.venv/bin/python demo_os_features.py
 ```
 
-**Option B: Live Missile Detection (5 min)** - See real-time AI detection
+
+**Option B: Live Webcam (Real-time)** - Detect from your camera
 
 **Windows:**
 ```powershell
-.venv\Scripts\python -m src.missile_tracker --video data\videos\Iron_Dome.mp4 --show-stats
+.\run.bat track --cam 0 
 ```
 
 **macOS/Linux:**
 ```bash
-./.venv/bin/python -m src.missile_tracker --video 'data/videos/Iron_Dome.mp4' --show-stats
+./run.sh track --cam 0 
 ```
 
-**Option C: Live Webcam (Real-time)** - Detect from your camera
-
-**Windows:**
-```powershell
-.\run.bat track --cam 0 --night
-```
-
-**macOS/Linux:**
-```bash
-./run.sh track --cam 0 --night
-```
-
-### 3️⃣ Download Dataset (Optional - Only for Training)
-
-✅ **Pre-trained models are already included!** The tracker runs immediately.
-
-**If you want to train your own model:**
-
-**Windows:**
-```powershell
-.\run.bat download-data
-```
-
-**macOS/Linux:**
-```bash
-./run.sh download-data
-```
-
----
 
 ## ⚡ Quick-Launch Reference (Copy-Paste Ready)
 
@@ -268,23 +259,6 @@ This project demonstrates production-grade implementation of:
 - ✅ **OS Concepts:** Synchronization, Memory Pooling, Priority Scheduling, Durable I/O.
 - ✅ **AI Engine:** Real-time YOLOv8 integration & Kalman filtering.
 - ✅ **Engineering:** Performance optimization and cross-platform architecture.
-
----
-
-## 📦 Data Source
-
-The missile detection model was trained on a curated dataset of labeled missile imagery hosted on Roboflow Universe.
-
-| Field | Details |
-|:------|:--------|
-| **Dataset** | Final Missiles |
-| **Platform** | Roboflow Universe |
-| **URL** | [universe.roboflow.com/qedwdqw/final-missiles](https://universe.roboflow.com/qedwdqw/final-missiles) |
-| **Images** | 9,206 labeled images |
-| **Task** | Object Detection |
-
-> [!NOTE]
-> The pre-trained weights (`yolo26n_custom.pt`) included in this repository were trained using this dataset. Running `download-data` via the CLI will fetch it automatically via the Roboflow API.
 
 ---
 
