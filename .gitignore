@@ -34,3 +34,8 @@ demo_output.txt
 # Roboflow Config
 .roboflow/
 roboflow/
+
+# Course Specific
+docs/
+Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md
+

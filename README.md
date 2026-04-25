@@ -19,15 +19,15 @@ Contact: **Jirathiwat Suntipreedatham** (Bangkok, Thailand)
 
 ### 🎓 Grading Rubric Status (16/16 - Grade 4)
 
-| Criterion | Grade | Evidence | Link |
-|-----------|-------|----------|------|
-| **OS Implementation** | **4/4** 🟢 | All 4 components (100%) | [See Report](Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md#2-os-implementation-correctness-30) |
-| **System Calls** | **4/4** 🟢 | 12+ calls + proper usage | [See Report](Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md#3-system-calls--file-management-20) |
-| **Performance & Trade-offs** | **4/4** 🟢 | Measured data + justification | [See Report](Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md#4-performance--design-trade-offs-20) |
-| **Presentation** | **4/4** 🟢 | Live demo + comprehensive Q&A | [See Report](Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md#5-final-project-presentation-30) |
+| Criterion | Grade | Evidence |
+|-----------|-------|----------|
+| **OS Implementation** | **4/4** 🟢 | All 4 components (100%) |
+| **System Calls** | **4/4** 🟢 | 12+ calls + proper usage |
+| **Performance & Trade-offs** | **4/4** 🟢 | Measured data + justification |
+| **Presentation** | **4/4** 🟢 | Live demo + comprehensive Q&A |
 
 > [!TIP]
-> **Consolidated Documentation:** Read the [Final Report](./Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md) for full rubric alignment and technical diagrams.
+> **Consolidated Documentation:** Please refer to the source code and the technical summaries below for implementation details.
 
 ---
 
@@ -135,6 +135,9 @@ chmod +x setup.sh && ./setup.sh
 ./run.sh track --video 'data/videos/NIGHT@.mp4'
 ./run.sh track --video 'data/videos/IRAN!1.mp4'
 ./run.sh track --video 'data/videos/IRAN!.mp4'
+./run.sh track --video 'data/videos/Banhgfi.mp4'
+./run.sh track --video 'data/videos/firework1.mp4'
+./run.sh track --video 'data/videos/firework2.mp4'
 ```
 
 ### **Windows (PowerShell/CMD)**
@@ -145,6 +148,9 @@ chmod +x setup.sh && ./setup.sh
 .\run.bat track --video data\videos\NIGHT@.mp4
 .\run.bat track --video data\videos\IRAN!1.mp4
 .\run.bat track --video data\videos\IRAN!.mp4
+.\run.bat track --video data\videos\Banhgfi.mp4
+.\run.bat track --video data\videos\firework1.mp4
+.\run.bat track --video data\videos\firework2.mp4
 ```
 
 > [!NOTE]
@@ -170,33 +176,19 @@ Video Input → [Missile Tracker Core] → {OS Subsystems}
                                   [Detection Output]
 ```
 
----
 
 ## 📖 Learning Paths
 
 Choose your path based on your goals:
-- **Quick Start (15 min):** Read [docs/0_INDEX.md](./docs/0_INDEX.md) and run `demo_os_features.py`.
-- **Technical Deep-Dive (60 min):** Explore [docs/1_TECHNICAL.md](./docs/1_TECHNICAL.md) for OS module details.
-- **Full Development (120 min):** Follow [docs/2_TESTING.md](./docs/2_TESTING.md) and modify components.
-- **Presentation Prep (45 min):** Use [docs/3_PRESENTATION.md](./docs/3_PRESENTATION.md) for scripts and Q&A.
+- **Quick Start (15 min):** Run `demo_os_features.py` to see the OS modules in action.
+- **Technical Deep-Dive (60 min):** Explore the `src/` directory for implementation details.
+- **Full Development (120 min):** Modify components and run benchmarks.
 
----
 
----
-
-## 🛠️ Project Configuration & Docs
-
-### 📌 Master Documentation
-| Document | Purpose |
-|----------|---------|
-| [docs/1_TECHNICAL.md](./docs/1_TECHNICAL.md) | Technical specs of the 4 OS modules. |
-| [docs/2_TESTING.md](./docs/2_TESTING.md) | Benchmarks and verification tests. |
-| [docs/3_PRESENTATION.md](./docs/3_PRESENTATION.md) | 5-minute script and Q&A scenarios. |
-| [Final_Report.md](./Final_Report_Missile_ITCS225_Principles_of_Operating_Systems.md) | Official course submission. |
+## 🛠️ Project Configuration
 
 ### 📂 Directory Overview
 ```text
-├── docs/               ← Consolidated documentation
 ├── src/                ← Source code (AI + OS Components)
 │   ├── os_synchronization.py
 │   ├── os_memory.py
@@ -207,7 +199,7 @@ Choose your path based on your goals:
 └── demo_os_features.py ← Standalone OS module demo
 ```
 
----
+
 
 ## 🎓 The 4 OS Components Explained
 
@@ -226,20 +218,27 @@ Choose your path based on your goals:
 
 ---
 
----
+
 
 ## 🧪 Testing & Validation
 
 ### Quick Verification (1 minute)
-```bash
-python demo_os_features.py
+
+**Windows:**
+```powershell
+.venv\Scripts\python demo_os_features.py
 ```
+
+**macOS/Linux:**
+```bash
+./.venv/bin/python demo_os_features.py
+```
+
 ✅ Verifies all 4 OS modules (Sync, Memory, Scheduler, File I/O).
 
-### Full Integration Testing
-Follow [docs/2_TESTING.md](./docs/2_TESTING.md) for performance benchmarks and multi-target scenarios.
 
----
+
+
 
 ## 🎬 Real-Time Controls
 
@@ -269,6 +268,23 @@ This project demonstrates production-grade implementation of:
 - ✅ **OS Concepts:** Synchronization, Memory Pooling, Priority Scheduling, Durable I/O.
 - ✅ **AI Engine:** Real-time YOLOv8 integration & Kalman filtering.
 - ✅ **Engineering:** Performance optimization and cross-platform architecture.
+
+---
+
+## 📦 Data Source
+
+The missile detection model was trained on a curated dataset of labeled missile imagery hosted on Roboflow Universe.
+
+| Field | Details |
+|:------|:--------|
+| **Dataset** | Final Missiles |
+| **Platform** | Roboflow Universe |
+| **URL** | [universe.roboflow.com/qedwdqw/final-missiles](https://universe.roboflow.com/qedwdqw/final-missiles) |
+| **Images** | 9,206 labeled images |
+| **Task** | Object Detection |
+
+> [!NOTE]
+> The pre-trained weights (`yolo26n_custom.pt`) included in this repository were trained using this dataset. Running `download-data` via the CLI will fetch it automatically via the Roboflow API.
 
 ---
 
@@ -342,7 +358,6 @@ The current pre-trained model (`yolo26n_custom.pt`) was trained over 100 epochs.
 ![Confusion Matrix](runs/detect/missile_yolo26_custom/confusion_matrix_normalized.png)
 *Normalized confusion matrix for pre-trained model.*
 
-👉 **For advanced analysis, open [docs/2_TESTING.md](./docs/2_TESTING.md)**
 
 ---
 
@@ -377,7 +392,6 @@ cp runs/detect/missile_yolo26_custom/weights/best.pt models/my_detector.pt
 ## 📁 Project Structure Explained
 
 *   **`src/`**: Core Source code (AI Engine + OS Subsystems).
-*   **`docs/`**: Master documentation suite and technical reports.
 *   **`models/`**: Pre-trained YOLO weights (`.pt`).
 *   **`data/`**: Sample tactical video footage.
 *   **`datasets/`**: Training data and validation sets.

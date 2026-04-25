@@ -4,6 +4,7 @@ Iron Dome Missile Tracker — Precision Crosshair & Bold Hierarchy Edition
 =============================================================================
 Controls:
     Q  — Quit
+    R  — Recording (Toggle)
     P  — Pause / Resume
     N  — Toggle Night/Day mode
     F  — Cycle Visual Filter (Thermal, NVG, Original)
@@ -1367,7 +1368,7 @@ def run(source, weights: str, conf: float, show_window: bool,
             if not ret: break
     
             h_orig, w_orig = frame.shape[:2]
-            proc_w = 640
+            proc_w = 360
             proc_h = int(h_orig * (proc_w / w_orig))
             
             scale_x = w_orig / float(proc_w)
