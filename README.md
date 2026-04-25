@@ -168,12 +168,7 @@ Video Input → [Missile Tracker Core] → {OS Subsystems}
 ```
 
 
-## 📖 Learning Paths
 
-Choose your path based on your goals:
-- **Quick Start (15 min):** Run `demo_os_features.py` to see the OS modules in action.
-- **Technical Deep-Dive (60 min):** Explore the `src/` directory for implementation details.
-- **Full Development (120 min):** Modify components and run benchmarks.
 
 
 ## 🛠️ Project Configuration
@@ -181,12 +176,15 @@ Choose your path based on your goals:
 ### 📂 Directory Overview
 ```text
 ├── src/                ← Source code (AI + OS Components)
+│   ├── missile_tracker.py
 │   ├── os_synchronization.py
 │   ├── os_memory.py
 │   ├── os_scheduler.py
 │   └── os_file_manager.py
 ├── models/             ← Pre-trained .pt weights
 ├── data/               ← Sample videos & images
+├── datasets/           ← Training data and validation sets
+├── runs/               ← Training results, metrics, and logs
 └── demo_os_features.py ← Standalone OS module demo
 ```
 
@@ -252,15 +250,9 @@ Press **'Q'** to end a session and view the **Tactical Subsystem Debrief**.
 - **Scheduler Stats:** Context switch counts & mission turnaround.
 - **Sync Stats:** Contention analytics for radar-display locks.
 
----
 
-## 🎓 Educational Value
-This project demonstrates production-grade implementation of:
-- ✅ **OS Concepts:** Synchronization, Memory Pooling, Priority Scheduling, Durable I/O.
-- ✅ **AI Engine:** Real-time YOLOv8 integration & Kalman filtering.
-- ✅ **Engineering:** Performance optimization and cross-platform architecture.
 
----
+
 
 ## 🧠 Training Your Own Model (Detailed Guide)
 
@@ -333,45 +325,11 @@ The current pre-trained model (`yolo26n_custom.pt`) was trained over 100 epochs.
 *Normalized confusion matrix for pre-trained model.*
 
 
----
 
-### **Phase 5: Deploy & Inference**
 
-Once training completes, copy the `best.pt` to the `models/` folder:
 
-**Windows:**
-```powershell
-copy runs\detect\missile_yolo26_custom\weights\best.pt models\my_detector.pt
-.\run.bat track --weights models\my_detector.pt --video data\videos\Iron_Dome.mp4
-```
 
-**macOS/Linux:**
-```bash
-cp runs/detect/missile_yolo26_custom/weights/best.pt models/my_detector.pt
-./run.sh track --weights models/my_detector.pt --video 'data/videos/Iron_Dome.mp4'
-```
 
----
-
-### **Phase 6: Troubleshooting Training**
-
-| Problem | Solution |
-|---------|----------|
-| **Out of Memory** | Reduce `batch_size` to 8 or 4 in `config.cfg`. |
-| **Very slow training** | Ensure `device=0` is set to use your NVIDIA GPU. |
-| **Early Stopping** | Training stops if metrics don't improve (use `--patience 50` to extend). |
-
----
-
-## 📁 Project Structure Explained
-
-*   **`src/`**: Core Source code (AI Engine + OS Subsystems).
-*   **`models/`**: Pre-trained YOLO weights (`.pt`).
-*   **`data/`**: Sample tactical video footage.
-*   **`datasets/`**: Training data and validation sets.
-*   **`runs/`**: Training results, metrics, and logs.
-
----
 
 ## 💡 Troubleshooting
 - **Failed to locate pyvenv.cfg:** Your virtual environment is corrupted. Delete `.venv/` and run `setup.bat` (or `setup.sh`) again.
